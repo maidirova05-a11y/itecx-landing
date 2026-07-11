@@ -1,0 +1,223 @@
+/* Adapted from Uiverse.io by Lakshay-art.
+   The sphere is authored at a fixed 250px — every inset shadow and the 400px
+   background-position loop are calibrated to that size — so responsive sizing
+   is done purely with transform: scale() to keep the artwork pixel-faithful. */
+
+.css-earth-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.css-earth {
+  height: 250px;
+  width: 250px;
+  flex: none;
+  border-radius: 50%;
+  background: url("/earth-texture.jpg");
+  background-size: cover;
+  background-position: left;
+  animation: earthRotate 30s linear 0s infinite;
+  box-shadow:
+    0px 0 20px rgba(255, 255, 255, 0.2),
+    -5px 0px 8px #c3f4ff inset,
+    15px 2px 25px #000 inset,
+    -24px -2px 34px #c3f4ff99 inset,
+    250px 0px 44px #00000066 inset,
+    150px 0px 38px #000000aa inset;
+  transform: scale(var(--earth-scale, 1));
+}
+
+/* Scale steps mirror the old globe's slot heights: 320px / 420px / 640px */
+.css-earth-wrap {
+  --earth-scale: 1.1;
+}
+@media (min-width: 640px) {
+  .css-earth-wrap {
+    --earth-scale: 1.45;
+  }
+}
+@media (min-width: 768px) {
+  .css-earth-wrap {
+    --earth-scale: 2.1;
+  }
+}
+
+@keyframes earthRotate {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+/* Twinkling 4-point stars */
+.css-star {
+  position: absolute;
+  animation: twinkling 3s infinite;
+}
+.css-star-row {
+  display: flex;
+}
+.css-star-corner {
+  width: 4px;
+  height: 5px;
+  overflow: hidden;
+  position: relative;
+}
+.css-star-corner::before {
+  content: "";
+  display: block;
+  width: 200%;
+  height: 200%;
+  position: absolute;
+  border-radius: 50%;
+}
+.css-star-corner.br::before {
+  bottom: 0;
+  right: 0;
+  box-shadow: 5px 5px 0 0 white;
+}
+.css-star-corner.bl::before {
+  bottom: 0;
+  left: 0;
+  box-shadow: -5px 5px 0 0 white;
+}
+.css-star-corner.tr::before {
+  top: 0;
+  right: 0;
+  box-shadow: 5px -5px 0 0 white;
+}
+.css-star-corner.tl::before {
+  top: 0;
+  left: 0;
+  box-shadow: -5px -5px 0 0 white;
+}
+
+@keyframes twinkling {
+  0%,
+  100% {
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ---- Italy marker ----
+   The texture (500×313, displayed at 400×250 under cover) scrolls +400px every
+   30s. Italy sits at displayed (196px, 64px) when background-position is 0, so
+   the marker rides the identical 30s linear timeline: translateX = (196 + 400·t/30)
+   mod 400, fading out on the sphere's shaded limb (x ≳ 236) and back in after the
+   wrap. Both animations start on the same style recalc, keeping them in sync. */
+.italy-marker {
+  position: absolute;
+  left: 0;
+  top: 64px;
+  width: 0;
+  height: 0;
+  transform: translateX(196px);
+  animation: italyOrbit 30s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes italyOrbit {
+  0% {
+    transform: translateX(196px);
+    opacity: 1;
+  }
+  10% {
+    transform: translateX(236px);
+    opacity: 1;
+  }
+  13.5% {
+    transform: translateX(250px);
+    opacity: 0;
+  }
+  51% {
+    transform: translateX(0px);
+    opacity: 0;
+  }
+  55% {
+    transform: translateX(16px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(196px);
+    opacity: 1;
+  }
+}
+
+/* Pulsing base dot pinned exactly on Italy */
+.italy-dot {
+  position: absolute;
+  left: -2px;
+  top: -2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #e31f2d;
+  box-shadow: 0 0 4px 1px rgba(227, 31, 45, 0.85);
+  animation: italyPulse 2s ease-in-out infinite;
+}
+
+@keyframes italyPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 3px 0px rgba(227, 31, 45, 0.9);
+  }
+  50% {
+    box-shadow: 0 0 7px 3px rgba(227, 31, 45, 0.55);
+  }
+}
+
+/* Flag: white pole rising from the dot, Italian tricolor via gradient */
+.italy-flag {
+  position: absolute;
+  left: -0.5px;
+  bottom: 1px;
+  width: 1px;
+  height: 15px;
+  background: rgba(255, 255, 255, 0.9);
+}
+.italy-flag::after {
+  content: "";
+  position: absolute;
+  left: 1px;
+  top: 0;
+  width: 11px;
+  height: 7px;
+  background: linear-gradient(90deg, #009246 0 33.3%, #f4f4f4 33.3% 66.6%, #ce2b37 66.6% 100%);
+  border-radius: 0.5px;
+}
+
+.italy-label {
+  position: absolute;
+  left: 15px;
+  top: -19px;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 5.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .css-earth {
+    animation: none;
+  }
+  .css-star {
+    animation: none;
+    opacity: 0.6;
+  }
+  /* Earth freezes at background-position 0 → Italy rests at x=196 */
+  .italy-marker,
+  .italy-dot {
+    animation: none;
+  }
+}

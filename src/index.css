@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+@theme {
+  /* Type */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Surfaces — navy-black canvas with tonal layering (no drop shadows) */
+  --color-ink: #06080d;
+  --color-surface: #0a0d15;
+  --color-surface-1: #10131f;
+  --color-surface-2: #161a29;
+  --color-surface-3: #1d2233;
+
+  /* Text */
+  --color-text: #f4f4f6;
+  --color-text-muted: #a1a1a8;
+  --color-text-faint: #6c6c74;
+
+  /* Accent — ITECX red */
+  --color-accent: #e31f2d;
+  --color-accent-soft: #ff8a90;
+  --color-accent-dim: #2c0e13;
+
+  /* Secondary — ITECX navy */
+  --color-navy: #14335e;
+  --color-navy-soft: #6f93c4;
+
+  /* Borders */
+  --color-hairline: rgb(255 255 255 / 0.08);
+  --color-hairline-strong: rgb(255 255 255 / 0.16);
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-full: 999px;
+
+  /* Container */
+  --breakpoint-3xl: 1600px;
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+/* Custom easing tokens — sharp start, long elegant settle. No default/linear timings anywhere. */
+:root {
+  --ease-out-premium: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-micro: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Visible, on-brand focus ring for every interactive element — never rely on browser default. */
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-accent-soft);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Skip-to-content link — hidden until keyboard-focused */
+.skip-link {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  transform: translateY(-120%);
+  background: var(--color-accent);
+  color: #fff;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 0 0 8px 0;
+  transition: transform 220ms var(--ease-micro);
+}
+.skip-link:focus-visible {
+  transform: translateY(0);
+  outline-offset: -2px;
+}
+
+/* Micro-interactions — transform/opacity only, 150–250ms, barely-there scale */
+.press {
+  transition: transform 180ms var(--ease-micro), opacity 180ms var(--ease-micro), border-color 200ms var(--ease-micro), background-color 200ms var(--ease-micro);
+}
+.press:hover {
+  transform: scale(1.02);
+}
+.press:active {
+  transform: scale(0.98);
+}
+
+/* Scroll-reveal primitive driven by IntersectionObserver, spring-eased via JS transform (see useReveal) */
+.reveal {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0);
+  will-change: transform, opacity;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  transition: opacity 900ms var(--ease-out-premium), transform 900ms var(--ease-out-premium);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Respect the OS-level motion preference: reveals resolve instantly instead of animating,
+   and the .press hover/active scale is dropped so nothing moves involuntarily. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal.is-visible {
+    transition: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .press,
+  .press:hover,
+  .press:active {
+    transition: none !important;
+    transform: none !important;
+  }
+  .skip-link {
+    transition: none !important;
+  }
+}
