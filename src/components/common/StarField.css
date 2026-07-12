@@ -1,0 +1,73 @@
+/* Twinkling 4-point sparkle stars — decorative section background.
+   Same construction as the hero's stars (four curved-corner quarters),
+   namespaced separately so sections don't depend on CssEarth.css. */
+
+.sf-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.sf-star {
+  position: absolute;
+  transform: scale(var(--sf-scale, 1));
+  animation: sfTwinkle var(--sf-dur, 3s) ease-in-out infinite;
+  animation-delay: var(--sf-delay, 0s);
+}
+
+.sf-row {
+  display: flex;
+}
+
+.sf-c {
+  width: 4px;
+  height: 5px;
+  overflow: hidden;
+  position: relative;
+}
+.sf-c::before {
+  content: "";
+  display: block;
+  width: 200%;
+  height: 200%;
+  position: absolute;
+  border-radius: 50%;
+}
+.sf-c.br::before {
+  bottom: 0;
+  right: 0;
+  box-shadow: 5px 5px 0 0 white;
+}
+.sf-c.bl::before {
+  bottom: 0;
+  left: 0;
+  box-shadow: -5px 5px 0 0 white;
+}
+.sf-c.tr::before {
+  top: 0;
+  right: 0;
+  box-shadow: 5px -5px 0 0 white;
+}
+.sf-c.tl::before {
+  top: 0;
+  left: 0;
+  box-shadow: -5px -5px 0 0 white;
+}
+
+@keyframes sfTwinkle {
+  0%,
+  100% {
+    opacity: 0.06;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sf-star {
+    animation: none;
+    opacity: 0.3;
+  }
+}

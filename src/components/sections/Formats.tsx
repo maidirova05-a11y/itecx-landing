@@ -1,7 +1,8 @@
 import { Container } from '../layout/Container'
 import { Reveal } from '../common/Reveal'
 import { SectionKicker } from '../common/SectionKicker'
-import { PhotoBackdrop } from '../common/PhotoBackdrop'
+import { StarField } from '../common/StarField'
+import { PhotoCard } from '../common/PhotoCard'
 import { GlassCard } from '../common/GlassCard'
 import { useContent } from '../../i18n'
 
@@ -60,8 +61,12 @@ export function Formats() {
   const { formats } = useContent()
 
   return (
-    <section id="formats" className="relative overflow-hidden py-24 md:py-32">
-      <PhotoBackdrop src="/images/formats.jpg" objectPosition="center 30%" />
+    <section
+      id="formats"
+      className="relative overflow-hidden py-24 md:py-32"
+      style={{ background: 'var(--color-ink)' }}
+    >
+      <StarField />
 
       <Container className="relative">
         <Reveal>
@@ -71,6 +76,9 @@ export function Formats() {
           <TrackCard track={formats.college} delayMs={80} />
           <TrackCard track={formats.academic} delayMs={180} />
         </div>
+        <Reveal delayMs={280} className="mt-6 md:mt-8">
+          <PhotoCard src="/images/formats.jpg" objectPosition="center 30%" className="h-52 sm:h-64" />
+        </Reveal>
       </Container>
     </section>
   )
