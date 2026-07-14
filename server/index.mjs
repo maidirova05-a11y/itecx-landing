@@ -11,6 +11,16 @@ import app from './app.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// Долгоживущий процесс (в отличие от serverless-функции на Vercel) — одна
+// необработанная ошибка способна убить Node и положить сайт для всех до
+// ручного перезапуска. Логируем и продолжаем работу вместо падения.
+process.on('unhandledRejection', (err) => {
+  console.error('[process] unhandled rejection:', err)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[process] uncaught exception:', err)
+})
+
 // Продакшен: раздаём собранный сайт из ../dist (в dev это делает Vite)
 const dist = path.join(__dirname, '..', 'dist')
 app.use(express.static(dist))
