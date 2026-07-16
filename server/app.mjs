@@ -31,6 +31,17 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
 
+// waitUntil продлевает жизнь serverless-функции Vercel после отправки ответа —
+// так Bitrix-синхронизация доезжает в фоне, не заставляя посетителя ждать.
+// Вне Vercel (VPS/локально) пакет может отсутствовать или не работать — там
+// процесс долгоживущий и фоновая задача доедет сама, поэтому мягкий fallback.
+let vercelWaitUntil = null
+try {
+  ;({ waitUntil: vercelWaitUntil } = await import('@vercel/functions'))
+} catch {
+  /* не на Vercel — fire-and-forget достаточно */
+}
+
 // ---- конфигурация ----------------------------------------------------------
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -100,7 +111,7 @@ async function bitrixCall(method, payload) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(8_000),
+    signal: AbortSignal.timeout(6_000),
   })
   const body = await res.json().catch(() => ({}))
   if (!res.ok || body.error) {
@@ -294,18 +305,22 @@ app.post('/api/applications', async (req, res) => {
     return res.status(500).json({ error: 'db' })
   }
 
-  // Заявка уже в БД — Bitrix дублируем «на лучших усилиях» и не даём его
-  // сбою испортить ответ пользователю (см. комментарий у pushToBitrix).
-  try {
-    const dealId = await pushToBitrix({ firstName, lastName, email, phone, track, organization, message })
-    if (dealId) {
-      await pool.query('UPDATE applications SET bitrix_deal_id = $1 WHERE id = $2', [String(dealId), insertedId])
-    }
-  } catch (e) {
-    console.error('[bitrix] push failed (заявка сохранена в БД, в CRM не попала):', e.message)
-  }
-
+  // Заявка уже в БД — отвечаем пользователю СРАЗУ, не дожидаясь Bitrix.
+  // Иначе медленный CRM (2 HTTP-вызова × до 6с) держит форму «на отправке»
+  // и на Vercel может упереть функцию в таймаут — посетитель увидел бы
+  // ошибку при фактически сохранённой заявке.
   res.json({ ok: true })
+
+  const bitrixTask = pushToBitrix({ firstName, lastName, email, phone, track, organization, message })
+    .then((dealId) =>
+      dealId
+        ? pool.query('UPDATE applications SET bitrix_deal_id = $1 WHERE id = $2', [String(dealId), insertedId])
+        : null
+    )
+    .catch((e) => console.error('[bitrix] push failed (заявка сохранена в БД, в CRM не попала):', e.message))
+
+  // Vercel: не дать платформе заморозить функцию до завершения фоновой задачи.
+  vercelWaitUntil?.(bitrixTask)
 })
 
 app.post('/api/admin/login', (req, res) => {
