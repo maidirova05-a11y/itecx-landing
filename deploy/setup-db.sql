@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS applications (
   phone text,
   track text NOT NULL,
   organization text,
-  message text
+  message text,
+  bitrix_deal_id text
 );
 CREATE INDEX IF NOT EXISTS applications_created_at_idx ON applications (created_at DESC);
 CREATE INDEX IF NOT EXISTS applications_email_idx ON applications (email);

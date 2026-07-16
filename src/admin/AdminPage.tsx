@@ -247,12 +247,13 @@ function Dashboard() {
                 <th className="px-4 py-3 font-medium">Формат</th>
                 <th className="px-4 py-3 font-medium">Организация</th>
                 <th className="px-4 py-3 font-medium">Комментарий</th>
+                <th className="px-4 py-3 font-medium">CRM</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-text-faint">
+                  <td colSpan={8} className="px-4 py-8 text-center text-text-faint">
                     {loading ? 'Загрузка…' : 'Заявок пока нет'}
                   </td>
                 </tr>
@@ -287,6 +288,13 @@ function Dashboard() {
                     <td className="px-4 py-3 text-text-muted">{r.organization ?? '—'}</td>
                     <td className="max-w-[240px] truncate px-4 py-3 text-text-muted" title={r.message ?? undefined}>
                       {r.message ?? '—'}
+                    </td>
+                    <td className="px-4 py-3 text-center" title={r.bitrix_deal_id ? `Сделка #${r.bitrix_deal_id}` : 'Не синхронизировано'}>
+                      {r.bitrix_deal_id ? (
+                        <span style={{ color: 'var(--color-accent-soft)' }}>✓</span>
+                      ) : (
+                        <span className="text-text-faint">—</span>
+                      )}
                     </td>
                   </tr>
                 ))

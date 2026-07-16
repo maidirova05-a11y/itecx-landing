@@ -16,6 +16,10 @@
  *  - все SQL-запросы параметризованы (нет конкатенации строк → нет SQLi);
  *  - ответы /api/* никогда не кешируются (Cache-Control: no-store).
  *
+ * Bitrix24: каждая заявка после сохранения в БД best-effort дублируется
+ * сделкой в CRM (см. pushToBitrix) — сбой Bitrix не портит ответ пользователю,
+ * БД остаётся источником правды. Настраивается через BITRIX_WEBHOOK_URL.
+ *
  * Примечание для serverless: лимитеры in-memory, т.е. на Vercel они действуют
  * в пределах одного «тёплого» инстанса функции. Для лендинга этого достаточно;
  * при росте нагрузки лимиты можно перенести в БД или KV.
@@ -43,6 +47,10 @@ const {
   ADMIN_PASSWORD_HASH,
   ADMIN_SALT = 'itecx-admin-v1',
   TOKEN_SECRET,
+  // Необязательно: если не задан, заявки просто не дублируются в Bitrix24 —
+  // сайт и без него работает штатно (см. pushToBitrix ниже).
+  BITRIX_WEBHOOK_URL,
+  BITRIX_CATEGORY_ID = '17',
 } = process.env
 
 if (!DATABASE_URL || !ADMIN_PASSWORD_HASH || !TOKEN_SECRET) {
@@ -75,6 +83,73 @@ const pool = new pg.Pool({
 pool.on('error', (err) => {
   console.error('[db] idle client error (обработано, процесс жив):', err.message)
 })
+
+// ---- интеграция с Bitrix24 --------------------------------------------------
+//
+// Best-effort: заявка уже сохранена в нашей БД до вызова этой функции, поэтому
+// падение/недоступность Bitrix НЕ ломает форму для посетителя — мы просто
+// логируем ошибку и продолжаем. БД остаётся единственным надёжным источником
+// правды; bitrix_deal_id в таблице — просто след успешной синхронизации.
+//
+// Секрет — сам URL вебхука (в нём токен), поэтому он живёт только в env,
+// как и DATABASE_URL, и никогда не попадает в git.
+
+async function bitrixCall(method, payload) {
+  const url = `${BITRIX_WEBHOOK_URL.replace(/\/+$/, '')}/${method}.json`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(8_000),
+  })
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok || body.error) {
+    throw new Error(body.error_description || body.error || `HTTP ${res.status}`)
+  }
+  return body.result
+}
+
+/** Создаёт контакт + сделку в воронке CATEGORY_ID (по умолчанию 17 — «ITECX»
+ * из ссылки заказчика). Возвращает ID созданной сделки или null, если
+ * интеграция не настроена / упала (в последнем случае — кидает наверх). */
+async function pushToBitrix({ firstName, lastName, email, phone, track, organization, message }) {
+  if (!BITRIX_WEBHOOK_URL) return null
+
+  let contactId
+  try {
+    contactId = await bitrixCall('crm.contact.add', {
+      fields: {
+        NAME: firstName,
+        LAST_NAME: lastName,
+        SOURCE_ID: 'WEB',
+        EMAIL: [{ VALUE: email, VALUE_TYPE: 'WORK' }],
+        ...(phone ? { PHONE: [{ VALUE: phone, VALUE_TYPE: 'WORK' }] } : {}),
+        ...(organization ? { COMMENTS: `Организация: ${organization}` } : {}),
+      },
+    })
+  } catch (e) {
+    console.error('[bitrix] contact.add failed (сделка всё равно будет создана):', e.message)
+  }
+
+  const commentLines = [
+    `Формат участия: ${track}`,
+    `Email: ${email}`,
+    phone && `Телефон: ${phone}`,
+    organization && `Организация: ${organization}`,
+    message && `Комментарий: ${message}`,
+  ].filter(Boolean)
+
+  return bitrixCall('crm.deal.add', {
+    fields: {
+      TITLE: `ITECX — ${firstName} ${lastName}`,
+      CATEGORY_ID: Number(BITRIX_CATEGORY_ID),
+      SOURCE_ID: 'WEB',
+      COMMENTS: commentLines.join('\n'),
+      ...(contactId ? { CONTACT_ID: contactId } : {}),
+    },
+    params: { REGISTER_SONET_EVENT: 'Y' },
+  })
+}
 
 // ---- утилиты ---------------------------------------------------------------
 
@@ -206,17 +281,31 @@ app.post('/api/applications', async (req, res) => {
     return res.status(429).json({ error: 'rate_limit' })
   }
 
+  let insertedId
   try {
-    await pool.query(
+    const { rows } = await pool.query(
       `INSERT INTO applications (first_name, last_name, email, phone, track, organization, message)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
       [firstName, lastName, email, phone || null, track, organization || null, message || null]
     )
-    res.json({ ok: true })
+    insertedId = rows[0].id
   } catch (e) {
     console.error('insert failed:', e.message)
-    res.status(500).json({ error: 'db' })
+    return res.status(500).json({ error: 'db' })
   }
+
+  // Заявка уже в БД — Bitrix дублируем «на лучших усилиях» и не даём его
+  // сбою испортить ответ пользователю (см. комментарий у pushToBitrix).
+  try {
+    const dealId = await pushToBitrix({ firstName, lastName, email, phone, track, organization, message })
+    if (dealId) {
+      await pool.query('UPDATE applications SET bitrix_deal_id = $1 WHERE id = $2', [String(dealId), insertedId])
+    }
+  } catch (e) {
+    console.error('[bitrix] push failed (заявка сохранена в БД, в CRM не попала):', e.message)
+  }
+
+  res.json({ ok: true })
 })
 
 app.post('/api/admin/login', (req, res) => {

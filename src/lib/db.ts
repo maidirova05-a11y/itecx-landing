@@ -14,6 +14,8 @@ export interface ApplicationRow {
   track: string
   organization: string | null
   message: string | null
+  /** ID сделки в Bitrix24, если синхронизация прошла успешно (иначе null). */
+  bitrix_deal_id: string | null
 }
 
 export interface ApplicationInput {
