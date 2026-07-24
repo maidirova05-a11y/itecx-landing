@@ -1,0 +1,7 @@
+# ITECX — https://itecx.kz
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: https://itecx.kz/sitemap.xml

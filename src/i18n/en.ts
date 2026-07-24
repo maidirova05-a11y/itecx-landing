@@ -293,4 +293,13 @@ export const en: Content = {
     applyCta: 'Apply now',
     earthFlag: 'Italy · world stage',
   },
+
+  seo: {
+    ogLocale: 'en_US',
+    title: 'ITECX — International Scientific Congress',
+    description:
+      'ITECX — an international congress in science, engineering and mathematics. School and national stages, an international final in Italy, and publication in the Fibonacci scientific journal.',
+    keywords:
+      'ITECX, scientific congress, science, engineering, mathematics, Kazakhstan, Fibonacci, student congress, international congress, Italy, research paper',
+  },
 }

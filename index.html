@@ -2,15 +2,96 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="ITECX — международный научный конгресс в области науки, инженерии и математики. Национальный этап и международный финал в Италии." />
+
+    <!-- Primary meta (русский по умолчанию; JS обновляет под язык — см. i18n/applySeo) -->
+    <title>ITECX — Международный научный конгресс в Казахстане</title>
+    <meta
+      name="description"
+      content="ITECX — международный научный конгресс по инженерии, технологиям и математике. Школьный и национальный этапы, международный финал в Италии и публикация в научном журнале Fibonacci."
+    />
+    <meta
+      name="keywords"
+      content="ITECX, научный конгресс, наука, инженерия, математика, Казахстан, Fibonacci, конгресс школьников, международный конгресс, Италия, научная статья"
+    />
+    <meta name="author" content="ITECX" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#06080d" />
-    <title>ITECX — Международный научный конгресс</title>
+
+    <!-- Canonical + языковые версии (hreflang) -->
+    <link rel="canonical" href="https://itecx.kz/" />
+    <link rel="alternate" hreflang="ru" href="https://itecx.kz/" />
+    <link rel="alternate" hreflang="kk" href="https://itecx.kz/?lang=kk" />
+    <link rel="alternate" hreflang="en" href="https://itecx.kz/?lang=en" />
+    <link rel="alternate" hreflang="x-default" href="https://itecx.kz/" />
+
+    <!-- Open Graph (превью в мессенджерах / соцсетях) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ITECX" />
+    <meta property="og:title" content="ITECX — Международный научный конгресс в Казахстане" />
+    <meta
+      property="og:description"
+      content="Международный научный конгресс по инженерии, технологиям и математике. Школьный и национальный этапы, международный финал в Италии."
+    />
+    <meta property="og:url" content="https://itecx.kz/" />
+    <meta property="og:image" content="https://itecx.kz/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="ITECX — международный научный конгресс" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:locale:alternate" content="kk_KZ" />
+    <meta property="og:locale:alternate" content="en_US" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ITECX — Международный научный конгресс" />
+    <meta
+      name="twitter:description"
+      content="Международный научный конгресс по инженерии, технологиям и математике. Финал в Италии."
+    />
+    <meta name="twitter:image" content="https://itecx.kz/og-image.png" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/og-image.png" />
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Структурированные данные для Google (Организация + Сайт).
+         Факты — из материалов конгресса, без выдуманных дат/цен. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "EducationalOrganization",
+            "@id": "https://itecx.kz/#organization",
+            "name": "ITECX",
+            "alternateName": "First Fibonacci International Congress on Engineering, Technology, and Mathematics",
+            "url": "https://itecx.kz/",
+            "logo": "https://itecx.kz/og-image.png",
+            "description": "Международная научная площадка по инженерии, технологиям и математике: школьный и национальный этапы, международный финал в Италии, публикация в научном журнале Fibonacci.",
+            "areaServed": "KZ",
+            "knowsLanguage": ["ru", "kk", "en"]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://itecx.kz/#website",
+            "url": "https://itecx.kz/",
+            "name": "ITECX",
+            "inLanguage": ["ru", "kk", "en"],
+            "publisher": { "@id": "https://itecx.kz/#organization" }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

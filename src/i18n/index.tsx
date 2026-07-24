@@ -25,14 +25,68 @@ interface LanguageContextValue {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null)
 
+const isLang = (v: unknown): v is Lang => v === 'ru' || v === 'kk' || v === 'en'
+
+/** Приоритет источника языка: ?lang в URL (shareable-ссылка для поисковика и
+ * пользователя) → сохранённый выбор → русский по умолчанию. */
 function readSavedLang(): Lang {
   try {
+    const fromUrl = new URLSearchParams(window.location.search).get('lang')
+    if (isLang(fromUrl)) return fromUrl
+  } catch {
+    /* нет window/URL — игнорируем */
+  }
+  try {
     const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved === 'ru' || saved === 'kk' || saved === 'en') return saved
+    if (isLang(saved)) return saved
   } catch {
     /* storage unavailable (privacy mode) — fall through to default */
   }
   return 'ru'
+}
+
+const SITE_URL = 'https://itecx.kz'
+
+/** Канонический адрес для языка: ru — чистый корень, остальные — с ?lang. */
+function canonicalFor(lang: Lang): string {
+  return lang === 'ru' ? `${SITE_URL}/` : `${SITE_URL}/?lang=${lang}`
+}
+
+function upsertMeta(selector: string, attr: 'name' | 'property', key: string, content: string) {
+  let el = document.head.querySelector<HTMLMetaElement>(selector)
+  if (!el) {
+    el = document.createElement('meta')
+    el.setAttribute(attr, key)
+    document.head.appendChild(el)
+  }
+  el.setAttribute('content', content)
+}
+
+/** Синхронизирует title, description, canonical и OG/Twitter-теги с языком.
+ * Google рендерит JS, поэтому эти правки видны краулеру; плюс корректное
+ * превью в мессенджерах/соцсетях при шаринге страницы на нужном языке. */
+function applySeo(lang: Lang) {
+  const c = dictionaries[lang]
+  const url = canonicalFor(lang)
+  document.documentElement.lang = lang
+  document.title = c.seo.title
+
+  upsertMeta('meta[name="description"]', 'name', 'description', c.seo.description)
+  upsertMeta('meta[name="keywords"]', 'name', 'keywords', c.seo.keywords)
+  upsertMeta('meta[property="og:title"]', 'property', 'og:title', c.seo.title)
+  upsertMeta('meta[property="og:description"]', 'property', 'og:description', c.seo.description)
+  upsertMeta('meta[property="og:locale"]', 'property', 'og:locale', c.seo.ogLocale)
+  upsertMeta('meta[property="og:url"]', 'property', 'og:url', url)
+  upsertMeta('meta[name="twitter:title"]', 'name', 'twitter:title', c.seo.title)
+  upsertMeta('meta[name="twitter:description"]', 'name', 'twitter:description', c.seo.description)
+
+  let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
+  if (!canonical) {
+    canonical = document.createElement('link')
+    canonical.rel = 'canonical'
+    document.head.appendChild(canonical)
+  }
+  canonical.href = url
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
@@ -40,7 +94,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [switching, setSwitching] = useState(false)
 
   useEffect(() => {
-    document.documentElement.lang = lang
+    applySeo(lang)
+    // Отражаем язык в URL (?lang=…) без перезагрузки — ссылку можно
+    // скопировать и она откроется сразу на нужном языке.
+    try {
+      const url = new URL(window.location.href)
+      if (lang === 'ru') url.searchParams.delete('lang')
+      else url.searchParams.set('lang', lang)
+      window.history.replaceState(null, '', url.pathname + url.search + url.hash)
+    } catch {
+      /* history недоступна — не критично */
+    }
   }, [lang])
 
   const setLang = (next: Lang) => {
