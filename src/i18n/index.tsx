@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useState,
+  type ReactNode,
+} from 'react'
 import { ru, type Content } from './ru'
 import { en } from './en'
 import { kk } from './kk'
@@ -89,9 +96,23 @@ function applySeo(lang: Lang) {
   canonical.href = url
 }
 
+/** На сервере (пререндер) useLayoutEffect не выполняется и React ругается —
+ * там подменяем его на useEffect, который в SSR просто игнорируется. */
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(readSavedLang)
+  // Первый рендер всегда русский — ровно то, что запёк пререндер
+  // (scripts/prerender.mjs). Иначе при заходе по ?lang=en клиент нарисовал бы
+  // английский поверх русской разметки и React отбросил бы её как несовпавшую.
+  const [lang, setLangState] = useState<Lang>('ru')
   const [switching, setSwitching] = useState(false)
+
+  // Настоящий язык (?lang= либо сохранённый) применяем до первой отрисовки,
+  // поэтому подмены текста на экране не видно.
+  useIsomorphicLayoutEffect(() => {
+    const initial = readSavedLang()
+    if (initial !== 'ru') setLangState(initial)
+  }, [])
 
   useEffect(() => {
     applySeo(lang)

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "server": "node server/index.mjs",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && vite build --ssr src/entry-server.tsx --outDir .ssr-build && node scripts/prerender.mjs",
     "start": "npm run build && node server/index.mjs",
     "lint": "oxlint",
     "preview": "vite preview"

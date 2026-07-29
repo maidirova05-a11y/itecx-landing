@@ -1,13 +1,16 @@
 import { StrictMode, Suspense, lazy } from 'react'
-import { createRoot } from 'react-dom/client'
+import { createRoot, hydrateRoot } from 'react-dom/client'
 import './index.css'
-import App from './App.tsx'
-import { LanguageProvider } from './i18n'
+import { AppRoot } from './AppRoot.tsx'
 
 // Скрытый маршрут панели организатора: /admin. Ссылок на него на сайте нет,
 // код панели лежит в отдельном чанке и посетителям лендинга не загружается.
 const AdminPage = lazy(() => import('./admin/AdminPage').then((m) => ({ default: m.AdminPage })))
-const isAdmin = window.location.pathname.replace(/\/+$/, '') === '/admin'
+// На Vercel /admin переписывается на /admin.html (см. vercel.json), и адрес в
+// строке браузера остаётся /admin. Прямой заход по /admin.html тоже должен
+// открывать панель, а не лендинг.
+const adminPath = window.location.pathname.replace(/\/+$/, '')
+const isAdmin = adminPath === '/admin' || adminPath === '/admin.html'
 
 // Панель организатора не должна попадать в поисковую выдачу: перекрываем
 // глобальный robots-тег на noindex именно для /admin (в robots.txt она тоже
@@ -19,16 +22,34 @@ if (isAdmin) {
   document.title = 'ITECX — Панель организатора'
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    {isAdmin ? (
+const container = document.getElementById('root')!
+
+if (isAdmin) {
+  // Панель приходит с пустым root (dist/admin.html) — строим DOM с нуля.
+  createRoot(container).render(
+    <StrictMode>
       <Suspense fallback={null}>
         <AdminPage />
       </Suspense>
-    ) : (
-      <LanguageProvider>
-        <App />
-      </LanguageProvider>
-    )}
-  </StrictMode>,
-)
+    </StrictMode>,
+  )
+} else if (container.hasChildNodes()) {
+  // Прод: лендинг уже отрендерён в разметку при сборке
+  // (scripts/prerender.mjs) — подхватываем готовый DOM, а не пересобираем его.
+  // Анимации не затронуты: .reveal стартует скрытым и раскрывается из
+  // useEffect, как и раньше.
+  hydrateRoot(
+    container,
+    <StrictMode>
+      <AppRoot />
+    </StrictMode>,
+  )
+} else {
+  // `npm run dev`: vite отдаёт index.html из исходников с пустым root —
+  // гидрировать нечего, строим DOM с нуля.
+  createRoot(container).render(
+    <StrictMode>
+      <AppRoot />
+    </StrictMode>,
+  )
+}
