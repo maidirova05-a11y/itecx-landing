@@ -29,14 +29,14 @@ const dist = path.join(__dirname, '..', 'dist')
 // Адрес в браузере не меняется, поэтому canonical и hreflang остаются верными.
 // Должно стоять ДО express.static, иначе статика отдаст русский index.html.
 const LANGS = new Set(['kk', 'en'])
-const langFile = (base, lang) => (LANGS.has(lang) ? `${base}.${lang}.html` : `${base}.html`)
+const langFile = (base, lang) => `${base}.${LANGS.has(lang) ? lang : 'ru'}.html`
 const sendPage = (base) => (req, res) => res.sendFile(path.join(dist, langFile(base, req.query.lang)))
 
 app.get('/', sendPage('index'))
 app.get('/privacy', sendPage('privacy'))
 
 app.use(express.static(dist))
-app.get(/^\/(admin)?$/, (_req, res) => res.sendFile(path.join(dist, 'index.html')))
+app.get('/admin', (_req, res) => res.sendFile(path.join(dist, 'admin.html')))
 
 // На VPS слушаем только 127.0.0.1 — наружу порт не торчит,
 // внешний трафик заходит исключительно через nginx-прокси.

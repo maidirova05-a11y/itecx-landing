@@ -132,6 +132,12 @@ for (const t of targets) {
   console.log(`prerender: ${t.file} — ${markup.length} символов разметки (${t.page}/${t.lang})`)
 }
 
+// Шаблон от vite (dist/index.html) в готовой сборке не нужен: в нём пустой
+// root, а главное — файл в корне перехватывал бы `/?lang=kk` раньше правил
+// rewrite (см. комментарий к fileFor в entry-server.tsx).
+await rm(templatePath, { force: true })
+
 await rm(ssrDir, { recursive: true, force: true })
 
 console.log('prerender: dist/admin.html создан с пустым root')
+console.log('prerender: dist/index.html удалён — корень отдаётся правилами rewrite')
