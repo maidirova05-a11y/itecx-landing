@@ -5,7 +5,12 @@
   },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api" },
-    { "source": "/admin", "destination": "/admin.html" }
+    { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/", "has": [{ "type": "query", "key": "lang", "value": "kk" }], "destination": "/index.kk.html" },
+    { "source": "/", "has": [{ "type": "query", "key": "lang", "value": "en" }], "destination": "/index.en.html" },
+    { "source": "/privacy", "has": [{ "type": "query", "key": "lang", "value": "kk" }], "destination": "/privacy.kk.html" },
+    { "source": "/privacy", "has": [{ "type": "query", "key": "lang", "value": "en" }], "destination": "/privacy.en.html" },
+    { "source": "/privacy", "destination": "/privacy.html" }
   ],
   "headers": [
     {

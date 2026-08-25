@@ -34,15 +34,25 @@ const LanguageContext = createContext<LanguageContextValue | null>(null)
 
 const isLang = (v: unknown): v is Lang => v === 'ru' || v === 'kk' || v === 'en'
 
-/** Приоритет источника языка: ?lang в URL (shareable-ссылка для поисковика и
- * пользователя) → сохранённый выбор → русский по умолчанию. */
-function readSavedLang(): Lang {
+/** Язык из ?lang= в адресе. Null на сервере и когда параметра нет.
+ * Именно он определяет ПЕРВЫЙ рендер: сборка запекает под каждый язык свой
+ * HTML (index.kk.html и т.д.), и клиент обязан начать с того же словаря,
+ * иначе гидратация не совпадёт с разметкой. */
+export function langFromUrl(): Lang | null {
   try {
     const fromUrl = new URLSearchParams(window.location.search).get('lang')
     if (isLang(fromUrl)) return fromUrl
   } catch {
-    /* нет window/URL — игнорируем */
+    /* нет window/URL — SSR */
   }
+  return null
+}
+
+/** Приоритет источника языка: ?lang в URL (shareable-ссылка для поисковика и
+ * пользователя) → сохранённый выбор → русский по умолчанию. */
+function readSavedLang(): Lang {
+  const fromUrl = langFromUrl()
+  if (fromUrl) return fromUrl
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (isLang(saved)) return saved
@@ -54,9 +64,16 @@ function readSavedLang(): Lang {
 
 const SITE_URL = 'https://itecx.kz'
 
-/** Канонический адрес для языка: ru — чистый корень, остальные — с ?lang. */
-function canonicalFor(lang: Lang): string {
-  return lang === 'ru' ? `${SITE_URL}/` : `${SITE_URL}/?lang=${lang}`
+/** Страницы сайта: лендинг и политика конфиденциальности (/privacy).
+ * Роутера в проекте нет — страница выбирается по pathname в main.tsx. */
+export type Page = 'home' | 'privacy'
+
+const PAGE_PATH: Record<Page, string> = { home: '/', privacy: '/privacy' }
+
+/** Канонический адрес для языка: ru — чистый путь, остальные — с ?lang. */
+function canonicalFor(lang: Lang, page: Page): string {
+  const path = PAGE_PATH[page]
+  return lang === 'ru' ? `${SITE_URL}${path}` : `${SITE_URL}${path}?lang=${lang}`
 }
 
 function upsertMeta(selector: string, attr: 'name' | 'property', key: string, content: string) {
@@ -72,20 +89,23 @@ function upsertMeta(selector: string, attr: 'name' | 'property', key: string, co
 /** Синхронизирует title, description, canonical и OG/Twitter-теги с языком.
  * Google рендерит JS, поэтому эти правки видны краулеру; плюс корректное
  * превью в мессенджерах/соцсетях при шаринге страницы на нужном языке. */
-function applySeo(lang: Lang) {
+function applySeo(lang: Lang, page: Page) {
   const c = dictionaries[lang]
-  const url = canonicalFor(lang)
+  // У /privacy собственные title и description — иначе страница показалась бы
+  // в выдаче и в превью мессенджеров как дубль лендинга.
+  const seo = page === 'privacy' ? { ...c.seo, ...c.privacy.seo } : c.seo
+  const url = canonicalFor(lang, page)
   document.documentElement.lang = lang
-  document.title = c.seo.title
+  document.title = seo.title
 
-  upsertMeta('meta[name="description"]', 'name', 'description', c.seo.description)
+  upsertMeta('meta[name="description"]', 'name', 'description', seo.description)
   upsertMeta('meta[name="keywords"]', 'name', 'keywords', c.seo.keywords)
-  upsertMeta('meta[property="og:title"]', 'property', 'og:title', c.seo.title)
-  upsertMeta('meta[property="og:description"]', 'property', 'og:description', c.seo.description)
+  upsertMeta('meta[property="og:title"]', 'property', 'og:title', seo.title)
+  upsertMeta('meta[property="og:description"]', 'property', 'og:description', seo.description)
   upsertMeta('meta[property="og:locale"]', 'property', 'og:locale', c.seo.ogLocale)
   upsertMeta('meta[property="og:url"]', 'property', 'og:url', url)
-  upsertMeta('meta[name="twitter:title"]', 'name', 'twitter:title', c.seo.title)
-  upsertMeta('meta[name="twitter:description"]', 'name', 'twitter:description', c.seo.description)
+  upsertMeta('meta[name="twitter:title"]', 'name', 'twitter:title', seo.title)
+  upsertMeta('meta[name="twitter:description"]', 'name', 'twitter:description', seo.description)
 
   let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
   if (!canonical) {
@@ -100,22 +120,33 @@ function applySeo(lang: Lang) {
  * там подменяем его на useEffect, который в SSR просто игнорируется. */
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  // Первый рендер всегда русский — ровно то, что запёк пререндер
-  // (scripts/prerender.mjs). Иначе при заходе по ?lang=en клиент нарисовал бы
-  // английский поверх русской разметки и React отбросил бы её как несовпавшую.
-  const [lang, setLangState] = useState<Lang>('ru')
+export function LanguageProvider({
+  children,
+  page = 'home',
+  initialLang,
+}: {
+  children: ReactNode
+  page?: Page
+  /** Язык пререндера. Задаётся только на сервере (entry-server.tsx): в браузере
+   * язык первого рендера берётся из ?lang= — ровно того параметра, по которому
+   * сервер отдал соответствующий запечённый HTML. */
+  initialLang?: Lang
+}) {
+  // Первый рендер обязан совпасть с запечённой разметкой: /?lang=kk отдаётся
+  // из index.kk.html, поэтому и клиент стартует с казахского словаря. Без
+  // параметра — русский, как в index.html.
+  const [lang, setLangState] = useState<Lang>(() => initialLang ?? langFromUrl() ?? 'ru')
   const [switching, setSwitching] = useState(false)
 
-  // Настоящий язык (?lang= либо сохранённый) применяем до первой отрисовки,
-  // поэтому подмены текста на экране не видно.
+  // Сохранённый выбор языка (localStorage) применяем до первой отрисовки —
+  // подмены текста на экране не видно. При заходе с ?lang= он уже учтён выше.
   useIsomorphicLayoutEffect(() => {
     const initial = readSavedLang()
-    if (initial !== 'ru') setLangState(initial)
+    setLangState((current) => (initial === current ? current : initial))
   }, [])
 
   useEffect(() => {
-    applySeo(lang)
+    applySeo(lang, page)
     // Отражаем язык в URL (?lang=…) без перезагрузки — ссылку можно
     // скопировать и она откроется сразу на нужном языке.
     try {
@@ -126,7 +157,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     } catch {
       /* history недоступна — не критично */
     }
-  }, [lang])
+  }, [lang, page])
 
   const setLang = (next: Lang) => {
     if (next === lang || switching) return

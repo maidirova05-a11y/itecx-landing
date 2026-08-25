@@ -314,6 +314,20 @@ export function Apply() {
                   >
                     {status === 'sending' ? apply.sending : apply.submit}
                   </button>
+
+                  {/* Согласие на обработку данных берётся в момент отправки — рядом с кнопкой,
+                      а не только ссылкой в подвале, которую посетитель формы не увидит. */}
+                  <p className="mt-4 text-[12.5px] leading-relaxed text-text-faint">
+                    {apply.consentBefore}
+                    <a
+                      href="/privacy"
+                      className="underline underline-offset-2 hover:text-text"
+                      style={{ textDecorationColor: 'var(--color-hairline-strong)' }}
+                    >
+                      {apply.consentLink}
+                    </a>
+                    {apply.consentAfter}
+                  </p>
                 </form>
               )}
             </GlassCard>

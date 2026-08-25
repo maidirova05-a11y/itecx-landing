@@ -9,8 +9,12 @@ const AdminPage = lazy(() => import('./admin/AdminPage').then((m) => ({ default:
 // На Vercel /admin переписывается на /admin.html (см. vercel.json), и адрес в
 // строке браузера остаётся /admin. Прямой заход по /admin.html тоже должен
 // открывать панель, а не лендинг.
-const adminPath = window.location.pathname.replace(/\/+$/, '')
-const isAdmin = adminPath === '/admin' || adminPath === '/admin.html'
+const currentPath = window.location.pathname.replace(/\/+$/, '')
+const isAdmin = currentPath === '/admin' || currentPath === '/admin.html'
+// Политика конфиденциальности — отдельная страница с запечённой разметкой
+// (dist/privacy.html; на Vercel /privacy переписывается на неё, см. vercel.json).
+const isPrivacy = currentPath === '/privacy' || currentPath === '/privacy.html'
+const page = isPrivacy ? 'privacy' : 'home'
 
 // Панель организатора не должна попадать в поисковую выдачу: перекрываем
 // глобальный robots-тег на noindex именно для /admin (в robots.txt она тоже
@@ -41,7 +45,7 @@ if (isAdmin) {
   hydrateRoot(
     container,
     <StrictMode>
-      <AppRoot />
+      <AppRoot page={page} />
     </StrictMode>,
   )
 } else {
@@ -49,7 +53,7 @@ if (isAdmin) {
   // гидрировать нечего, строим DOM с нуля.
   createRoot(container).render(
     <StrictMode>
-      <AppRoot />
+      <AppRoot page={page} />
     </StrictMode>,
   )
 }

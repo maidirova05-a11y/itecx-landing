@@ -12,6 +12,7 @@ import { Rules } from './components/sections/Rules'
 import { Criteria } from './components/sections/Criteria'
 import { Process } from './components/sections/Process'
 import { ProjectJourney } from './components/sections/ProjectJourney'
+import { Faq } from './components/sections/Faq'
 import { Apply } from './components/sections/Apply'
 import { useLanguage } from './i18n'
 
@@ -42,6 +43,7 @@ function App() {
         <Criteria />
         <Process />
         <ProjectJourney />
+        <Faq />
         <Apply />
       </main>
       <Footer />

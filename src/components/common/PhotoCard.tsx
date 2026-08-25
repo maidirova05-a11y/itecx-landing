@@ -1,3 +1,5 @@
+import { webpFor } from './webp'
+
 /** Framed illustrative photo shown beside section content (decorative — hidden
  * from assistive tech, the surrounding text carries the meaning). */
 export function PhotoCard({
@@ -15,7 +17,17 @@ export function PhotoCard({
       className={`m-0 overflow-hidden rounded-lg border ${className}`}
       style={{ borderColor: 'var(--color-hairline)' }}
     >
-      <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" style={{ objectPosition }} />
+      <picture className="contents">
+        <source srcSet={webpFor(src)} type="image/webp" />
+        <img
+          src={src}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover"
+          style={{ objectPosition }}
+        />
+      </picture>
     </figure>
   )
 }

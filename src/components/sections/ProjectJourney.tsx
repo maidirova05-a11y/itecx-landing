@@ -1,6 +1,7 @@
 import { Container } from '../layout/Container'
 import { Reveal } from '../common/Reveal'
 import { SectionKicker } from '../common/SectionKicker'
+import { webpFor } from '../common/webp'
 import { useContent } from '../../i18n'
 
 export function ProjectJourney() {
@@ -23,18 +24,25 @@ export function ProjectJourney() {
                 >
                   {/* Themed photo backdrop — kept dim under a gradient so the text
                       stays fully readable; brightens slightly on hover (opacity/transform only) */}
-                  <img
-                    src={`/images/step-${String(i + 1).padStart(2, '0')}.jpg`}
-                    alt=""
-                    aria-hidden="true"
-                    loading="lazy"
-                    className="absolute inset-0 h-full w-full object-cover opacity-[0.22] grayscale-[40%] group-hover:opacity-40 group-hover:scale-[1.04]"
-                    style={{
-                      transitionProperty: 'opacity, transform',
-                      transitionDuration: '450ms',
-                      transitionTimingFunction: 'var(--ease-out-soft)',
-                    }}
-                  />
+                  <picture className="contents">
+                    <source
+                      srcSet={webpFor(`/images/step-${String(i + 1).padStart(2, '0')}.jpg`)}
+                      type="image/webp"
+                    />
+                    <img
+                      src={`/images/step-${String(i + 1).padStart(2, '0')}.jpg`}
+                      alt=""
+                      aria-hidden="true"
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 h-full w-full object-cover opacity-[0.22] grayscale-[40%] group-hover:opacity-40 group-hover:scale-[1.04]"
+                      style={{
+                        transitionProperty: 'opacity, transform',
+                        transitionDuration: '450ms',
+                        transitionTimingFunction: 'var(--ease-out-soft)',
+                      }}
+                    />
+                  </picture>
                   <div
                     aria-hidden="true"
                     className="absolute inset-0"

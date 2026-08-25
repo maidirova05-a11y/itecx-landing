@@ -5,6 +5,8 @@
  * `tone` should match whatever solid background the section used before
  * (var(--color-ink) or var(--color-surface)) so the seam is invisible.
  */
+import { webpFor } from './webp'
+
 export function PhotoBackdrop({
   src,
   objectPosition = 'center',
@@ -16,14 +18,20 @@ export function PhotoBackdrop({
 }) {
   return (
     <>
-      <img
-        src={src}
-        alt=""
-        aria-hidden="true"
-        loading="lazy"
-        className="absolute inset-0 h-full w-full object-cover"
-        style={{ objectPosition }}
-      />
+      {/* display:contents у <picture> — чтобы обёртка не ломала абсолютное
+          позиционирование самой картинки */}
+      <picture className="contents">
+        <source srcSet={webpFor(src)} type="image/webp" />
+        <img
+          src={src}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ objectPosition }}
+        />
+      </picture>
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"

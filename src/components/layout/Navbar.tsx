@@ -3,7 +3,8 @@ import { Container } from './Container'
 import { BrandMark } from '../common/BrandMark'
 import { LANGS, useLanguage } from '../../i18n'
 
-function LangSwitcher({ ariaLabel }: { ariaLabel: string }) {
+/** Общий для лендинга и /privacy — переключатель один и тот же на обеих страницах. */
+export function LangSwitcher({ ariaLabel }: { ariaLabel: string }) {
   const { lang, setLang } = useLanguage()
   return (
     <div
@@ -79,12 +80,18 @@ export function Navbar() {
           <BrandMark size={44} fontSize={14} />
         </a>
 
-        <nav aria-label={content.ui.mainNavAria} className="hidden items-center gap-8 lg:flex">
+        {/* gap сжимается на узких десктопах: шесть пунктов + переключатель языка +
+            кнопка заявки едва помещаются в 1024px. whitespace-nowrap обязателен —
+            без него flex сжимает ссылки и «О конгрессе» ломается на две строки. */}
+        <nav
+          aria-label={content.ui.mainNavAria}
+          className="hidden items-center gap-4 lg:flex xl:gap-8"
+        >
           {content.nav.map((item) => (
             <a
               key={item.href}
               href={item.href}
-              className="press text-[14px] text-text-muted hover:text-text"
+              className="press whitespace-nowrap text-[13px] text-text-muted hover:text-text xl:text-[14px]"
               style={{ transitionProperty: 'color, transform' }}
             >
               {item.label}
@@ -92,11 +99,11 @@ export function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-4 lg:flex">
+        <div className="hidden shrink-0 items-center gap-3 lg:flex xl:gap-4">
           <LangSwitcher ariaLabel={content.ui.langAria} />
           <a
             href="#apply"
-            className="press rounded-full px-5 py-2.5 text-[13px] font-medium text-white"
+            className="press whitespace-nowrap rounded-full px-4 py-2.5 text-[13px] font-medium text-white xl:px-5"
             style={{ background: 'var(--color-accent)' }}
           >
             {content.ui.applyCta}

@@ -8,6 +8,7 @@ export const en: Content = {
     { label: 'Congress stages', href: '#stages' },
     { label: 'Criteria', href: '#criteria' },
     { label: 'International stage', href: '#italy' },
+    { label: 'FAQ', href: '#faq' },
   ],
 
   hero: {
@@ -247,6 +248,42 @@ export const en: Content = {
     ],
   },
 
+  faq: {
+    kicker: 'FAQ',
+    title: 'The essentials, briefly',
+    subtitle: 'Answers to the questions participants and teachers ask most often.',
+    items: [
+      {
+        q: 'Who can take part in the ITECX congress?',
+        a: 'There are two formats. ITECX college is for school students from grade 3 to grade 11. ITECX academic is for university students, lecturers, and professors. The categories are the same: educational technology, science, mathematics, and engineering.',
+      },
+      {
+        q: 'What stages does the congress consist of?',
+        a: 'For school students there are three steps: the school stage, the national congress, and the international congress in Italy. The academic format has two stages — national and international.',
+      },
+      {
+        q: 'Which language should I present in?',
+        a: 'At the national level, presentations and papers are delivered in your native language. Participants admitted to the international congress present in English.',
+      },
+      {
+        q: 'What does a participant need to prepare?',
+        a: 'A research paper with Introduction, Methodology, Results, and Conclusions sections, plus an oral presentation of up to 10 minutes and a poster — poster sessions are limited to 5 minutes.',
+      },
+      {
+        q: 'How are projects evaluated?',
+        a: 'The jury looks at scientific depth, innovation, contribution to education, the soundness of the research methods, presentation skills, and whether the paper meets academic standards.',
+      },
+      {
+        q: 'What do participants gain?',
+        a: 'Projects that succeed at the international final are considered for publication in the indexed Fibonacci scientific journal. Participants also gain experience in academic discussion and connections with universities and researchers from other countries.',
+      },
+      {
+        q: 'How do I apply?',
+        a: 'Fill in the form on this page: name, contacts, and participation format. The organizers will get in touch and explain the upcoming stage and the timeline for preparing your work.',
+      },
+    ],
+  },
+
   apply: {
     kicker: 'Application',
     title: 'Submit your application',
@@ -275,11 +312,185 @@ export const en: Content = {
     required: 'Please fill in the required fields',
     invalidEmail: 'Please check the email address',
     cooldown: 'Application already sent. You can retry in a minute.',
+    consentBefore: 'By submitting the form you agree to our ',
+    consentLink: 'privacy policy',
+    consentAfter: '.',
   },
 
   footer: {
     name: 'ITECX',
     tagline: 'ITECX — a congress in science, engineering, and mathematics',
+  },
+
+  privacy: {
+    backHome: 'Back to home',
+    kicker: 'Legal information',
+    title: 'Privacy Policy',
+    updatedLabel: 'Updated',
+    updatedDate: 'August 17, 2026',
+    intro:
+      'This document explains in plain language what data a visitor to itecx.kz leaves behind, why the ITECX organizers need it, and what you can do about it.',
+    tocTitle: 'Contents',
+    sections: [
+      {
+        id: 'general',
+        title: 'General provisions',
+        paragraphs: [
+          'itecx.kz is the official website of the ITECX congress (First Fibonacci International Congress on Engineering, Technology, and Mathematics) in Kazakhstan. Here we present the congress and accept applications to take part.',
+          'We process personal data in line with the Law of the Republic of Kazakhstan “On Personal Data and Its Protection”. By submitting the application form you consent to the processing of the data it contains on the terms of this document.',
+          'If you disagree with anything below, simply do not submit the form — you can read about the congress without it.',
+        ],
+        items: [],
+      },
+      {
+        id: 'data',
+        title: 'What data we collect',
+        paragraphs: [
+          'You give us every piece of data yourself, through the “Submit your application” form. We ask only for what is needed to contact a participant and determine their format:',
+        ],
+        items: [
+          'first and last name',
+          'email address',
+          'phone number — optional',
+          'participation format: ITECX college (grades 3–11) or ITECX academic (university students, lecturers, professors)',
+          'school or university — optional',
+          'a comment about your project — optional',
+        ],
+      },
+      {
+        id: 'technical',
+        title: 'Technical data',
+        paragraphs: [
+          'When the form is submitted, the server briefly sees the sender’s IP address — it is used solely to cut off spam and automated submissions. The IP address is not stored in the applications database.',
+          'We do not determine your location, do not build advertising profiles, and do not track you across other websites.',
+        ],
+        items: [],
+      },
+      {
+        id: 'purpose',
+        title: 'Why we need it',
+        paragraphs: ['The data you leave is used only to work with your application:'],
+        items: [
+          'to contact you and answer your questions about the congress',
+          'to determine the right format — ITECX college or ITECX academic',
+          'to guide the participant through the school, national, and international stages',
+          'to share organizational details: dates and requirements for the research paper, poster, and presentation',
+          'to keep internal records of applications and anonymized statistics by region and institution',
+        ],
+      },
+      {
+        id: 'sharing',
+        title: 'Who we share your data with',
+        paragraphs: [
+          'The full list of applications is visible only to the congress organizers — the panel is password-protected. Beyond them, data may reach:',
+        ],
+        items: [
+          'services the website cannot run without (see “External services”) — only to the extent their work requires',
+          'jury members and stage coordinators — only the part concerning your project',
+          'the organizers of the international final in Italy — for participants who passed the national stage, and only the data needed for registration at the final and publication in the Fibonacci scientific journal',
+          'state authorities — where the law of the Republic of Kazakhstan requires it',
+        ],
+      },
+      {
+        id: 'services',
+        title: 'External services',
+        paragraphs: ['The site relies on a few external services, and each of them sees only the necessary minimum:'],
+        items: [
+          'Google Fonts — loads the Inter and JetBrains Mono typefaces; in doing so your browser technically discloses your IP address to the service',
+          'FormSubmit — mirrors each application as an email to the organizers so that none is lost',
+          'Bitrix24 — the organizers’ CRM: an application arrives there as a contact and a deal for further work',
+          'hosting and database — the website and the applications table physically live on their servers',
+        ],
+      },
+      {
+        id: 'cookies',
+        title: 'Cookies',
+        paragraphs: [
+          'There are no advertising or analytics cookies on this site. Only technical values are kept in your browser storage:',
+        ],
+        items: [
+          'the interface language you chose — so the right version opens on your next visit',
+          'the time of your last submission — so the form cannot be resubmitted every second',
+          'the organizer panel login token — for organizers only; it lives 12 hours and is erased when the tab is closed',
+        ],
+      },
+      {
+        id: 'retention',
+        title: 'How long we keep it',
+        paragraphs: [
+          'Applications are kept for the duration of the current congress cycle and a reasonable period afterwards — for record-keeping and for inviting participants to the next season.',
+          'As soon as the data is no longer needed, or you ask us to remove it, we delete the record from the database and from the CRM.',
+        ],
+        items: [],
+      },
+      {
+        id: 'children',
+        title: 'Children’s data',
+        paragraphs: [
+          'ITECX college is for school students from grade 3 to grade 11, so we treat their data with particular care.',
+        ],
+        items: [
+          'an application for a minor is submitted by a parent, legal guardian, or a mentor teacher with their consent',
+          'we ask only for a name, contacts, and the institution — nothing beyond that',
+          'do not enter health information, national ID numbers, document numbers, or other sensitive details: they are not needed to take part',
+        ],
+      },
+      {
+        id: 'security',
+        title: 'How your data is protected',
+        paragraphs: ['We protect applications with technical measures rather than promises:'],
+        items: [
+          'the site runs over HTTPS only — the form travels through an encrypted channel',
+          'every application is validated twice, in the browser and on the server, and database queries are parameterized',
+          'submission rate is limited: no more than 10 applications per hour from one address and 5 per day per email',
+          'the list of applications opens only after a password login; the password itself is never stored — only its hash — and the session expires after 12 hours',
+          'a Content Security Policy and strict headers shield the site from embedding and third-party scripts',
+        ],
+      },
+      {
+        id: 'rights',
+        title: 'What you can ask for',
+        paragraphs: ['Regarding your own data, you have the right to:'],
+        items: [
+          'find out what data of yours we hold',
+          'correct an inaccuracy',
+          'delete your application',
+          'withdraw your consent to processing',
+        ],
+      },
+      {
+        id: 'requests',
+        title: 'How to send a request',
+        paragraphs: [
+          'An email to the address in the “Contacts” section is enough — sent from the address you used in the application. We reply within a reasonable time, usually a few working days.',
+          'Withdrawing consent means we stop processing the data — taking part in the congress through the website will no longer be possible.',
+        ],
+        items: [],
+      },
+      {
+        id: 'updates',
+        title: 'Updates to this document',
+        paragraphs: [
+          'This policy may change — for instance, if a new service or participation format appears. The current version always lives at this address, and the date of the last update is shown at the top of the page.',
+          'We try to announce material changes in advance: on the website or by email to those who submitted an application.',
+        ],
+        items: [],
+      },
+    ],
+    contacts: {
+      title: 'Contacts',
+      text: 'Write to the congress organizers — we will answer any question about your data and correct or delete it on request.',
+      emailLabel: 'Email',
+      email: 'info@az-group.kz',
+      siteLabel: 'Website',
+      site: 'itecx.kz',
+    },
+    rights: '© 2026 ITECX Kazakhstan. All rights reserved.',
+    seo: {
+      title: 'Privacy Policy — ITECX',
+      description:
+        'How the ITECX congress handles personal data submitted through the application form on itecx.kz: what we collect, why, who we share it with, how long we keep it, and how to have it deleted.',
+    },
   },
 
   ui: {
@@ -292,6 +503,7 @@ export const en: Content = {
     italyCta: 'International stage',
     applyCta: 'Apply now',
     earthFlag: 'Italy · world stage',
+    privacyLink: 'Privacy Policy',
   },
 
   seo: {
