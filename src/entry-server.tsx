@@ -33,16 +33,13 @@ function canonical(page: Page, lang: Lang): string {
   return `${SITE_URL}${`${prefix}${PAGE_PATH[page]}` || '/'}`
 }
 
-/** Имя запечённого файла: index.ru.html, index.kk.html, privacy.en.html и т.д.
- *
- * Главная НЕ называется index.html намеренно. Vercel сначала ищет файл на
- * диске и только потом применяет rewrites, поэтому при наличии index.html
- * запрос `/?lang=kk` отдавал бы русскую версию, не дойдя до правила с ?lang.
- * Без файла в корне все три языка проходят через rewrites одинаково.
- * Политику ради единообразия называем так же. */
+/** Имя запечённого файла: русские версии — index.html и privacy.html, они
+ * лежат по своим адресам и отдаются напрямую; остальные языки — index.kk.html
+ * и т.п., на них ведут rewrites с /kk и /en. Языки разведены по разным путям,
+ * поэтому правила ни с чем не конфликтуют. */
 function fileFor(page: Page, lang: Lang): string {
   const base = page === 'home' ? 'index' : 'privacy'
-  return `${base}.${lang}.html`
+  return lang === 'ru' ? `${base}.html` : `${base}.${lang}.html`
 }
 
 function seoFor(page: Page, lang: Lang) {

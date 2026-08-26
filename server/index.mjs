@@ -27,14 +27,13 @@ const dist = path.join(__dirname, '..', 'dist')
 // Языковые версии — отдельные запечённые файлы (см. scripts/prerender.mjs):
 // /kk отдаёт index.kk.html, /en/privacy — privacy.en.html, чистые адреса —
 // русские версии. Должно стоять ДО express.static.
-const sendPage = (base, lang) => (_req, res) => res.sendFile(path.join(dist, `${base}.${lang}.html`))
+const sendPage = (file) => (_req, res) => res.sendFile(path.join(dist, file))
 
 for (const lang of ['kk', 'en']) {
-  app.get(`/${lang}`, sendPage('index', lang))
-  app.get(`/${lang}/privacy`, sendPage('privacy', lang))
+  app.get(`/${lang}`, sendPage(`index.${lang}.html`))
+  app.get(`/${lang}/privacy`, sendPage(`privacy.${lang}.html`))
 }
-app.get('/', sendPage('index', 'ru'))
-app.get('/privacy', sendPage('privacy', 'ru'))
+app.get('/privacy', sendPage('privacy.html'))
 
 app.use(express.static(dist))
 app.get('/admin', (_req, res) => res.sendFile(path.join(dist, 'admin.html')))

@@ -8,8 +8,7 @@
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/:lang(kk|en)/privacy", "destination": "/privacy.:lang.html" },
     { "source": "/:lang(kk|en)", "destination": "/index.:lang.html" },
-    { "source": "/privacy", "destination": "/privacy.ru.html" },
-    { "source": "/", "destination": "/index.ru.html" }
+    { "source": "/privacy", "destination": "/privacy.html" }
   ],
   "headers": [
     {
