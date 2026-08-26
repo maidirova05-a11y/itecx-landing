@@ -9,11 +9,13 @@ const AdminPage = lazy(() => import('./admin/AdminPage').then((m) => ({ default:
 // На Vercel /admin переписывается на /admin.html (см. vercel.json), и адрес в
 // строке браузера остаётся /admin. Прямой заход по /admin.html тоже должен
 // открывать панель, а не лендинг.
-const currentPath = window.location.pathname.replace(/\/+$/, '')
+// Языковой префикс (/kk, /en) к выбору страницы отношения не имеет — язык
+// определяется отдельно в i18n/langFromUrl.
+const currentPath = window.location.pathname.replace(/\/+$/, '').replace(/^\/(kk|en)(?=\/|$)/, '')
 const isAdmin = currentPath === '/admin' || currentPath === '/admin.html'
 // Политика конфиденциальности — отдельная страница с запечённой разметкой
-// (dist/privacy.html; на Vercel /privacy переписывается на неё, см. vercel.json).
-const isPrivacy = currentPath === '/privacy' || currentPath === '/privacy.html'
+// (dist/privacy.ru.html и т.д.; адреса переписываются на них, см. vercel.json).
+const isPrivacy = currentPath === '/privacy' || /^\/privacy\.(ru|kk|en)\.html$/.test(currentPath)
 const page = isPrivacy ? 'privacy' : 'home'
 
 // Панель организатора не должна попадать в поисковую выдачу: перекрываем

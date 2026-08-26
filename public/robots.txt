@@ -4,9 +4,9 @@ Allow: /
 Disallow: /admin
 Disallow: /api/
 
-# Языковые версии доступны по /?lang=kk и /?lang=en — именно эти адреса указаны
-# в hreflang и в sitemap. Сами запечённые файлы (index.kk.html и т.п.) — их
-# внутренняя реализация, в индексе они не нужны, иначе получится дубль страницы.
+# Языковые версии живут на /kk и /en — именно эти адреса указаны в hreflang
+# и в sitemap. Сами запечённые файлы (index.kk.html и т.п.) — их внутренняя
+# реализация, в индексе они не нужны, иначе получится дубль страницы.
 Disallow: /index.ru.html
 Disallow: /index.kk.html
 Disallow: /index.en.html

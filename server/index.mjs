@@ -25,15 +25,16 @@ process.on('uncaughtException', (err) => {
 const dist = path.join(__dirname, '..', 'dist')
 
 // Языковые версии — отдельные запечённые файлы (см. scripts/prerender.mjs):
-// по /?lang=kk отдаём index.kk.html, по /privacy?lang=en — privacy.en.html.
-// Адрес в браузере не меняется, поэтому canonical и hreflang остаются верными.
-// Должно стоять ДО express.static, иначе статика отдаст русский index.html.
-const LANGS = new Set(['kk', 'en'])
-const langFile = (base, lang) => `${base}.${LANGS.has(lang) ? lang : 'ru'}.html`
-const sendPage = (base) => (req, res) => res.sendFile(path.join(dist, langFile(base, req.query.lang)))
+// /kk отдаёт index.kk.html, /en/privacy — privacy.en.html, чистые адреса —
+// русские версии. Должно стоять ДО express.static.
+const sendPage = (base, lang) => (_req, res) => res.sendFile(path.join(dist, `${base}.${lang}.html`))
 
-app.get('/', sendPage('index'))
-app.get('/privacy', sendPage('privacy'))
+for (const lang of ['kk', 'en']) {
+  app.get(`/${lang}`, sendPage('index', lang))
+  app.get(`/${lang}/privacy`, sendPage('privacy', lang))
+}
+app.get('/', sendPage('index', 'ru'))
+app.get('/privacy', sendPage('privacy', 'ru'))
 
 app.use(express.static(dist))
 app.get('/admin', (_req, res) => res.sendFile(path.join(dist, 'admin.html')))

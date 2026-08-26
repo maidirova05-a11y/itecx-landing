@@ -34,24 +34,38 @@ const LanguageContext = createContext<LanguageContextValue | null>(null)
 
 const isLang = (v: unknown): v is Lang => v === 'ru' || v === 'kk' || v === 'en'
 
-/** Язык из ?lang= в адресе. Null на сервере и когда параметра нет.
+/** Язык из адреса: /kk и /kk/privacy — казахский, /en… — английский,
+ * всё остальное — русский. Null на сервере.
+ *
  * Именно он определяет ПЕРВЫЙ рендер: сборка запекает под каждый язык свой
  * HTML (index.kk.html и т.д.), и клиент обязан начать с того же словаря,
  * иначе гидратация не совпадёт с разметкой. */
 export function langFromUrl(): Lang | null {
   try {
-    const fromUrl = new URLSearchParams(window.location.search).get('lang')
-    if (isLang(fromUrl)) return fromUrl
+    const match = /^\/(kk|en)(\/|$)/.exec(window.location.pathname)
+    if (match && isLang(match[1])) return match[1]
+  } catch {
+    /* нет window — SSR */
+  }
+  return null
+}
+
+/** Язык из старых ссылок вида ?lang=en. Раньше языковые версии жили на
+ * параметре, такие ссылки могли разойтись — продолжаем их понимать. */
+function legacyLangFromQuery(): Lang | null {
+  try {
+    const fromQuery = new URLSearchParams(window.location.search).get('lang')
+    if (isLang(fromQuery)) return fromQuery
   } catch {
     /* нет window/URL — SSR */
   }
   return null
 }
 
-/** Приоритет источника языка: ?lang в URL (shareable-ссылка для поисковика и
- * пользователя) → сохранённый выбор → русский по умолчанию. */
+/** Приоритет источника языка: путь → устаревший ?lang → сохранённый выбор →
+ * русский по умолчанию. */
 function readSavedLang(): Lang {
-  const fromUrl = langFromUrl()
+  const fromUrl = langFromUrl() ?? legacyLangFromQuery()
   if (fromUrl) return fromUrl
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
@@ -68,12 +82,23 @@ const SITE_URL = 'https://itecx.kz'
  * Роутера в проекте нет — страница выбирается по pathname в main.tsx. */
 export type Page = 'home' | 'privacy'
 
-const PAGE_PATH: Record<Page, string> = { home: '/', privacy: '/privacy' }
+const PAGE_PATH: Record<Page, string> = { home: '', privacy: '/privacy' }
 
-/** Канонический адрес для языка: ru — чистый путь, остальные — с ?lang. */
+/**
+ * Адрес страницы на нужном языке: / · /kk · /en/privacy и т.д.
+ *
+ * Язык живёт в пути, а не в ?lang: Vercel кеширует ответ по пути и параметр
+ * запроса в ключ кеша не входит — из-за этого на / выдавалась случайная
+ * языковая версия, какая попала в кеш первой. У отдельных путей такой
+ * проблемы нет, и для поисковика это привычнее.
+ */
+export function pathFor(page: Page, lang: Lang): string {
+  const prefix = lang === 'ru' ? '' : `/${lang}`
+  return `${prefix}${PAGE_PATH[page]}` || '/'
+}
+
 function canonicalFor(lang: Lang, page: Page): string {
-  const path = PAGE_PATH[page]
-  return lang === 'ru' ? `${SITE_URL}${path}` : `${SITE_URL}${path}?lang=${lang}`
+  return `${SITE_URL}${pathFor(page, lang)}`
 }
 
 function upsertMeta(selector: string, attr: 'name' | 'property', key: string, content: string) {
@@ -147,13 +172,14 @@ export function LanguageProvider({
 
   useEffect(() => {
     applySeo(lang, page)
-    // Отражаем язык в URL (?lang=…) без перезагрузки — ссылку можно
-    // скопировать и она откроется сразу на нужном языке.
+    // Отражаем язык в адресе без перезагрузки — ссылку можно скопировать, и
+    // она откроется сразу на нужном языке (сервер отдаст свой файл).
+    // Заодно чистим устаревший ?lang, если пришли по старой ссылке.
     try {
-      const url = new URL(window.location.href)
-      if (lang === 'ru') url.searchParams.delete('lang')
-      else url.searchParams.set('lang', lang)
-      window.history.replaceState(null, '', url.pathname + url.search + url.hash)
+      const target = pathFor(page, lang) + window.location.hash
+      if (target !== window.location.pathname + window.location.search + window.location.hash) {
+        window.history.replaceState(null, '', target)
+      }
     } catch {
       /* history недоступна — не критично */
     }

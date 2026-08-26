@@ -6,12 +6,10 @@
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api" },
     { "source": "/admin", "destination": "/admin.html" },
-    { "source": "/", "has": [{ "type": "query", "key": "lang", "value": "kk" }], "destination": "/index.kk.html" },
-    { "source": "/", "has": [{ "type": "query", "key": "lang", "value": "en" }], "destination": "/index.en.html" },
-    { "source": "/", "destination": "/index.ru.html" },
-    { "source": "/privacy", "has": [{ "type": "query", "key": "lang", "value": "kk" }], "destination": "/privacy.kk.html" },
-    { "source": "/privacy", "has": [{ "type": "query", "key": "lang", "value": "en" }], "destination": "/privacy.en.html" },
-    { "source": "/privacy", "destination": "/privacy.ru.html" }
+    { "source": "/:lang(kk|en)/privacy", "destination": "/privacy.:lang.html" },
+    { "source": "/:lang(kk|en)", "destination": "/index.:lang.html" },
+    { "source": "/privacy", "destination": "/privacy.ru.html" },
+    { "source": "/", "destination": "/index.ru.html" }
   ],
   "headers": [
     {

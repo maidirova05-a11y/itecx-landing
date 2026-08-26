@@ -15,16 +15,22 @@
 
 | Адрес | Файл | Язык |
 | --- | --- | --- |
-| `/` | `index.html` | ru |
-| `/?lang=kk` | `index.kk.html` | kk |
-| `/?lang=en` | `index.en.html` | en |
-| `/privacy` | `privacy.html` | ru |
-| `/privacy?lang=kk` | `privacy.kk.html` | kk |
-| `/privacy?lang=en` | `privacy.en.html` | en |
+| `/` | `index.ru.html` | ru |
+| `/kk` | `index.kk.html` | kk |
+| `/en` | `index.en.html` | en |
+| `/privacy` | `privacy.ru.html` | ru |
+| `/kk/privacy` | `privacy.kk.html` | kk |
+| `/en/privacy` | `privacy.en.html` | en |
 
-Подмена файла по параметру `?lang=` происходит на сервере: на Vercel — правилами
-`rewrites` в `vercel.json`, на VPS — в `server/index.mjs`. Адрес в браузере не
-меняется, поэтому `canonical` и `hreflang` остаются честными.
+Адрес → файл сопоставляет сервер: на Vercel — правилами `rewrites` в
+`vercel.json`, на VPS — в `server/index.mjs`.
+
+Язык живёт в пути, а не в `?lang=`, по практической причине: Vercel кеширует
+ответ по пути, параметр запроса в ключ кеша не входит — на `/` выдавалась та
+языковая версия, которая первой попала в кеш. Старые ссылки с `?lang=` не
+ломаются: язык из параметра по-прежнему применяется, а адрес заменяется на
+путь. Файла `index.html` в сборке намеренно нет: файл в корне перехватывал бы
+запрос раньше правил переадресации.
 
 Зачем: раньше по любому адресу отдавалась русская разметка, а нужный язык
 подставлял JavaScript. Google это ещё разбирает, Яндекс — далеко не всегда,
@@ -59,7 +65,7 @@
 - Готовая разметка в HTML (пререндер) — текст виден краулерам без выполнения JS.
 - `robots.txt`: закрыты `/admin`, `/api/` и служебные файлы языковых версий,
   указан sitemap.
-- `sitemap.xml`: обе страницы с `lastmod` и перекрёстными `hreflang`.
+- `sitemap.xml`: обе страницы с `lastmod` и перекрёстными `hreflang` на /kk и /en.
 - Заголовки: на каждой странице один `<h1>`, разделы — `<h2>`/`<h3>`.
 - Open Graph и Twitter Card на своём языке — корректное превью в WhatsApp,
   Telegram и соцсетях.
@@ -82,7 +88,7 @@
    задеплоить и нажать «Подтвердить».
 3. «Файлы Sitemap» → добавить `sitemap.xml`.
 4. «Проверка URL» → вставить `https://itecx.kz/` → «Запросить индексирование».
-   Повторить для `/?lang=kk`, `/?lang=en` и `/privacy`.
+   Повторить для `/kk`, `/en` и `/privacy`.
 
 ### Яндекс.Вебмастер — https://webmaster.yandex.ru
 

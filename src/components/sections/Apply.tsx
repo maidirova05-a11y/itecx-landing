@@ -3,7 +3,7 @@ import { Container } from '../layout/Container'
 import { Reveal } from '../common/Reveal'
 import { SectionKicker } from '../common/SectionKicker'
 import { GlassCard } from '../common/GlassCard'
-import { useContent } from '../../i18n'
+import { pathFor, useLanguage } from '../../i18n'
 import { insertApplication, RateLimitError } from '../../lib/db'
 
 /** Email relay — резервная копия заявки на почту организаторов (основное
@@ -53,7 +53,8 @@ const fieldStyle = {
 }
 
 export function Apply() {
-  const { apply } = useContent()
+  const { lang, content } = useLanguage()
+  const { apply } = content
   const [status, setStatus] = useState<Status>('idle')
   const [validationError, setValidationError] = useState<string | null>(null)
   const mountedAt = useRef(Date.now())
@@ -320,7 +321,7 @@ export function Apply() {
                   <p className="mt-4 text-[12.5px] leading-relaxed text-text-faint">
                     {apply.consentBefore}
                     <a
-                      href="/privacy"
+                      href={pathFor('privacy', lang)}
                       className="underline underline-offset-2 hover:text-text"
                       style={{ textDecorationColor: 'var(--color-hairline-strong)' }}
                     >

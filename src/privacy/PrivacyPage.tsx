@@ -13,14 +13,17 @@ import { GlassCard } from '../components/common/GlassCard'
 import { Reveal } from '../components/common/Reveal'
 import { SectionKicker } from '../components/common/SectionKicker'
 import { Dot } from '../components/common/Dot'
-import { useContent } from '../i18n'
+import { pathFor, useLanguage } from '../i18n'
 
 /** Двузначный номер раздела для монопрефикса: 01, 02, … */
 const num = (i: number) => String(i + 1).padStart(2, '0')
 
 export function PrivacyPage() {
-  const { privacy, ui } = useContent()
+  const { lang, content } = useLanguage()
+  const { privacy, ui } = content
   const { sections, contacts } = privacy
+  // Ссылки «домой» ведут на главную того же языка: /kk, /en или /
+  const home = pathFor('home', lang)
 
   return (
     <div>
@@ -38,12 +41,12 @@ export function PrivacyPage() {
         }}
       >
         <Container className="flex h-20 items-center justify-between gap-4">
-          <a href="/" className="press inline-flex items-center" aria-label="ITECX">
+          <a href={home} className="press inline-flex items-center" aria-label="ITECX">
             <BrandMark size={44} fontSize={14} />
           </a>
 
           <div className="flex items-center gap-3 sm:gap-4">
-            <a href="/" className="press hidden text-[13.5px] text-text-muted hover:text-text sm:inline">
+            <a href={home} className="press hidden text-[13.5px] text-text-muted hover:text-text sm:inline">
               ← {privacy.backHome}
             </a>
             <LangSwitcher ariaLabel={ui.langAria} />
@@ -163,7 +166,7 @@ export function PrivacyPage() {
                           {contacts.siteLabel}
                         </dt>
                         <dd className="mt-1.5">
-                          <a href="/" className="press text-[15px] text-text hover:text-accent-soft">
+                          <a href={home} className="press text-[15px] text-text hover:text-accent-soft">
                             {contacts.site}
                           </a>
                         </dd>
@@ -183,7 +186,7 @@ export function PrivacyPage() {
       >
         <Container className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[13px] text-text-faint">{privacy.rights}</p>
-          <a href="/" className="press text-[13px] text-text-muted hover:text-text">
+          <a href={home} className="press text-[13px] text-text-muted hover:text-text">
             ← {privacy.backHome}
           </a>
         </Container>

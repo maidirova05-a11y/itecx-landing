@@ -1,9 +1,10 @@
 import { Container } from './Container'
 import { BrandMark } from '../common/BrandMark'
-import { useContent } from '../../i18n'
+import { pathFor, useLanguage } from '../../i18n'
 
 export function Footer() {
-  const { nav, footer, ui } = useContent()
+  const { lang, content } = useLanguage()
+  const { nav, footer, ui } = content
 
   return (
     <footer className="border-t py-14" style={{ borderColor: 'var(--color-hairline)', background: 'var(--color-ink)' }}>
@@ -20,7 +21,7 @@ export function Footer() {
             </a>
           ))}
           {/* Отдельная страница, а не якорь — отсюда единственный вход в неё для посетителя. */}
-          <a href="/privacy" className="press text-[13px] text-text-faint hover:text-text">
+          <a href={pathFor('privacy', lang)} className="press text-[13px] text-text-faint hover:text-text">
             {ui.privacyLink}
           </a>
         </nav>

@@ -23,14 +23,14 @@ const OG_IMAGE = `${SITE_URL}/og-image.png`
 
 const dictionaries: Record<Lang, Content> = { ru, kk, en }
 const LANGS: Lang[] = ['ru', 'kk', 'en']
-const PAGE_PATH: Record<Page, string> = { home: '/', privacy: '/privacy' }
+const PAGE_PATH: Record<Page, string> = { home: '', privacy: '/privacy' }
 
-/** Канонический адрес: русский — чистый путь, остальные языки — с ?lang.
- * Должен совпадать с canonicalFor() в i18n/index.tsx, иначе клиент после
- * гидратации перепишет canonical на другой адрес и поисковик увидит расхождение. */
+/** Канонический адрес: / · /kk · /en/privacy. Должен совпадать с pathFor()
+ * в i18n/index.tsx, иначе клиент после гидратации перепишет canonical на
+ * другой адрес и поисковик увидит расхождение. */
 function canonical(page: Page, lang: Lang): string {
-  const path = PAGE_PATH[page]
-  return lang === 'ru' ? `${SITE_URL}${path}` : `${SITE_URL}${path}?lang=${lang}`
+  const prefix = lang === 'ru' ? '' : `/${lang}`
+  return `${SITE_URL}${`${prefix}${PAGE_PATH[page]}` || '/'}`
 }
 
 /** Имя запечённого файла: index.ru.html, index.kk.html, privacy.en.html и т.д.
