@@ -50,8 +50,8 @@ Project → **Settings → Environment Variables** (для Production):
 
 | Имя | Значение |
 | --- | --- |
-| `ADMIN_PASSWORD_HASH` | `REDACTED_ADMIN_PASSWORD_HASH` |
-| `ADMIN_SALT` | `itecx-admin-v1` |
+| `ADMIN_PASSWORD_HASH` | ваш хэш: `echo -n 'ВАШ_SALT::ВАШ_ПАРОЛЬ' \| sha256sum` |
+| `ADMIN_SALT` | случайная строка (соль) |
 | `TOKEN_SECRET` | случайная строка: `openssl rand -hex 32` (или любые ~64 случайных символа) |
 
 `DATABASE_URL` уже добавлен интеграцией Neon.

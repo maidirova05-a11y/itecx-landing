@@ -57,15 +57,14 @@ nano server/.env
 
 ```
 DATABASE_URL=postgresql://itecx_app:ПАРОЛЬ_ИЗ_ШАГА_2@localhost:5432/itecx
-ADMIN_PASSWORD_HASH=REDACTED_ADMIN_PASSWORD_HASH
-ADMIN_SALT=itecx-admin-v1
+ADMIN_PASSWORD_HASH=ХЭШ_ПАРОЛЯ_АДМИНА
+ADMIN_SALT=СЛУЧАЙНАЯ_СОЛЬ
 TOKEN_SECRET=СЛУЧАЙНАЯ_СТРОКА   # openssl rand -hex 32
 PORT=3001
 ```
 
-`ADMIN_PASSWORD_HASH` — это SHA-256 от `itecx-admin-v1::пароль`; хэш выше
-соответствует текущему паролю панели. Чтобы сменить пароль:
-`echo -n 'itecx-admin-v1::НовыйПароль' | sha256sum`.
+`ADMIN_PASSWORD_HASH` — это SHA-256 от `ADMIN_SALT::пароль`. Чтобы получить хэш
+для нового пароля: `echo -n 'ВАШ_SALT::НовыйПароль' | sha256sum`.
 
 ## 5. Демон Node
 
