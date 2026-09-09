@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Container } from './Container'
 import { BrandMark } from '../common/BrandMark'
 import { LANGS, useLanguage } from '../../i18n'
+import { REGISTRATION_URL } from '../../lib/registration'
 
 /** Общий для лендинга и /privacy — переключатель один и тот же на обеих страницах. */
 export function LangSwitcher({ ariaLabel }: { ariaLabel: string }) {
@@ -102,7 +103,9 @@ export function Navbar() {
         <div className="hidden shrink-0 items-center gap-3 lg:flex xl:gap-4">
           <LangSwitcher ariaLabel={content.ui.langAria} />
           <a
-            href="#apply"
+            href={REGISTRATION_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="press whitespace-nowrap rounded-full px-4 py-2.5 text-[13px] font-medium text-white xl:px-5"
             style={{ background: 'var(--color-accent)' }}
           >
@@ -175,7 +178,9 @@ export function Navbar() {
             </a>
           ))}
           <a
-            href="#apply"
+            href={REGISTRATION_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             onClick={() => setMenuOpen(false)}
             className="press mt-2 rounded-full px-5 py-3 text-center text-[14px] font-medium text-white"
             style={{ background: 'var(--color-accent)' }}
