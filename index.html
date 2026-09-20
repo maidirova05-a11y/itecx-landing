@@ -28,8 +28,8 @@
     <!-- Canonical + языковые версии (hreflang) -->
     <link rel="canonical" href="https://itecx.kz/" />
     <link rel="alternate" hreflang="ru" href="https://itecx.kz/" />
-    <link rel="alternate" hreflang="kk" href="https://itecx.kz/?lang=kk" />
-    <link rel="alternate" hreflang="en" href="https://itecx.kz/?lang=en" />
+    <link rel="alternate" hreflang="kk" href="https://itecx.kz/kk" />
+    <link rel="alternate" hreflang="en" href="https://itecx.kz/en" />
     <link rel="alternate" hreflang="x-default" href="https://itecx.kz/" />
 
     <!-- Open Graph (превью в мессенджерах / соцсетях) -->
@@ -60,9 +60,14 @@
     <meta name="twitter:image" content="https://itecx.kz/og-image.png" />
     <meta name="twitter:image:alt" content="ITECX — международный научный конгресс" />
 
-    <!-- Icons -->
+    <!-- Icons.
+         apple-touch-icon раньше указывал на og-image.png — карточку 1200x630.
+         iOS вписывает её в квадрат, и на домашнем экране получался сплющенный
+         баннер. Здесь квадратные PNG, собранные из той же геометрии, что и
+         favicon.svg (scripts/make-icons.mjs). -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/og-image.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />

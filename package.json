@@ -9,6 +9,7 @@
     "build": "tsc -b && vite build && vite build --ssr src/entry-server.tsx --outDir .ssr-build && node scripts/prerender.mjs",
     "start": "npm run build && node server/index.mjs",
     "lint": "oxlint",
+    "check:seo": "node scripts/check-seo.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -30,7 +30,9 @@ const ssrDir = path.join(root, '.ssr-build')
 const ROOT_DIV = '<div id="root"></div>'
 
 // pathToFileURL обязателен: на Windows голый абсолютный путь в import() падает.
-const { render, targets } = await import(pathToFileURL(path.join(ssrDir, 'entry-server.js')).href)
+const { render, targets, buildSitemap } = await import(
+  pathToFileURL(path.join(ssrDir, 'entry-server.js')).href,
+)
 
 const templatePath = path.join(dist, 'index.html')
 const template = await readFile(templatePath, 'utf8')
@@ -41,7 +43,22 @@ if (!template.includes(ROOT_DIV)) {
 
 // vercel.json переписывает /admin на отдельный файл: панели организатора нужен
 // пустой root, иначе на ней мелькнул бы лендинг и сломалась бы гидратация.
-await writeFile(path.join(dist, 'admin.html'), template)
+//
+// Шаблон рассчитан на лендинг, поэтому в нём стоит `index, follow` и canonical
+// на «/». Для панели это неверно дважды: индексировать её нельзя (robots.txt
+// её запрещает, но robots.txt — просьба не сканировать, а не запрет
+// индексировать чужую ссылку), а canonical на главную заявляет, что /admin и
+// «/» — одна и та же страница. Обе строки правим здесь, в единственном месте,
+// где этот файл создаётся.
+await writeFile(
+  path.join(dist, 'admin.html'),
+  template
+    .replace(
+      /<meta name="robots"[^>]*>/,
+      '<meta name="robots" content="noindex, nofollow" />',
+    )
+    .replace(/<link rel="canonical"[^>]*>/, ''),
+)
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -132,6 +149,14 @@ for (const t of targets) {
   console.log(`prerender: ${t.file} — ${markup.length} символов разметки (${t.page}/${t.lang})`)
 }
 
+/*
+ * sitemap.xml собирается здесь, а не лежит в public/, чтобы адреса, hreflang
+ * и lastmod не могли разойтись с тем, что реально запеклось: и файлы, и карта
+ * строятся из одного списка targets.
+ */
+await writeFile(path.join(dist, 'sitemap.xml'), buildSitemap())
+
 await rm(ssrDir, { recursive: true, force: true })
 
-console.log('prerender: dist/admin.html создан с пустым root')
+console.log(`prerender: dist/sitemap.xml — ${targets.length} адресов`)
+console.log('prerender: dist/admin.html создан с пустым root, noindex')
