@@ -1,0 +1,50 @@
+# ITECX целиком на своём сервере: сайт с API + собственная база Postgres.
+# Запасной вариант на случай, если Vercel/Forge или база недоступны — см. BACKUP.md.
+#
+#   cp docker.env.example docker.env   # и заполнить
+#   docker compose up -d --build
+#
+# Сайт слушает только 127.0.0.1:3103 — наружу его отдаёт Caddy/nginx с HTTPS.
+# DATABASE_URL здесь намеренно не берётся из окружения: контейнер всегда
+# работает со своей базой и не может случайно подключиться к боевой.
+
+name: itecx
+
+services:
+  db:
+    image: postgres:${POSTGRES_MAJOR:-17}
+    restart: unless-stopped
+    # Роль и база — те же, что в deploy/setup-db.sql на боевом сервере; этот
+    # же скрипт создаёт таблицу заявок при первом запуске.
+    environment:
+      POSTGRES_USER: itecx_app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: itecx
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./docker/db-init/10-tls.sh:/docker-entrypoint-initdb.d/10-tls.sh:ro
+      - ./deploy/setup-db.sql:/docker-entrypoint-initdb.d/20-setup-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U itecx_app -d itecx"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  app:
+    build: .
+    image: itecx-app
+    restart: unless-stopped
+    env_file: docker.env
+    environment:
+      DATABASE_URL: postgresql://itecx_app:app@db:5432/itecx
+      # TLS к базе включён (docker/db-init/10-tls.sh), сертификат самоподписанный.
+      DB_SSL_NO_VERIFY: "1"
+    ports:
+      - "127.0.0.1:${APP_PORT:-3103}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
