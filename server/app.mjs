@@ -5,9 +5,9 @@
  *   - на Vercel: api/index.mjs экспортирует его как serverless-функцию.
  *
  * Безопасность:
- *  - пароль администратора хранится ТОЛЬКО как SHA-256(соль::пароль);
+ *  - пароль администратора хранится ТОЛЬКО как хэш (scrypt; SHA-256 — устаревший формат);
  *  - вход выдаёт HMAC-токен с истечением (12 часов), секрет — в env;
- *  - перебор пароля ограничен по IP (5 промахов → блокировка с ростом);
+ *  - перебор пароля ограничен по IP и глобально, счётчик в БД;
  *  - приём заявок ограничен по IP и по email (анти-спам);
  *  - жёсткие HTTP-заголовки безопасности (CSP, X-Frame-Options и др.);
  *  - обрыв соединения с БД не роняет процесс (см. pool.on('error') ниже) —
@@ -20,9 +20,8 @@
  * сделкой в CRM (см. pushToBitrix) — сбой Bitrix не портит ответ пользователю,
  * БД остаётся источником правды. Настраивается через BITRIX_WEBHOOK_URL.
  *
- * Примечание для serverless: лимитеры in-memory, т.е. на Vercel они действуют
- * в пределах одного «тёплого» инстанса функции. Для лендинга этого достаточно;
- * при росте нагрузки лимиты можно перенести в БД или KV.
+ * Примечание для serverless: блокировка входа и суточный лимит заявок по email
+ * хранятся в БД и переживают холодные старты; почасовой лимит по IP — in-memory.
  */
 
 import express from 'express'
@@ -84,7 +83,10 @@ const pool = new pg.Pool({
   // чем зависший запрос, съедающий лимит serverless-функции.
   connectionTimeoutMillis: 8_000,
   idleTimeoutMillis: 30_000,
-  ssl: isLocalDb ? undefined : { rejectUnauthorized: false },
+  // Neon и другие управляемые Postgres предъявляют публично доверенный
+  // сертификат — проверяем его, иначе TLS-канал можно тихо перехватить.
+  // DB_SSL_NO_VERIFY=1 — только для сервера с самоподписанной цепочкой.
+  ssl: isLocalDb ? undefined : { rejectUnauthorized: process.env.DB_SSL_NO_VERIFY !== '1' },
 })
 
 // КРИТИЧНО: без этого обработчика ошибка на простаивающем соединении
@@ -166,6 +168,38 @@ async function pushToBitrix({ firstName, lastName, email, phone, track, organiza
 
 const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex')
 
+/** Сравнение строк за постоянное время — ответ не выдаёт, сколько символов совпало. */
+function safeEqual(a, b) {
+  const ha = crypto.createHash('sha256').update(String(a)).digest()
+  const hb = crypto.createHash('sha256').update(String(b)).digest()
+  return crypto.timingSafeEqual(ha, hb)
+}
+
+/**
+ * Проверка пароля администратора.
+ *
+ * Новый формат (рекомендуется): `scrypt:<соль hex>:<хэш hex>` — медленная
+ * функция с памятью, перебор утёкшего хэша стоит годы, а не минуты.
+ * Сгенерировать: `node scripts/hash-admin-password.mjs`.
+ *
+ * Старый формат — SHA-256 от `соль::пароль` — пока принимается, чтобы смена
+ * версии не заблокировала вход; замените его, как только будет минута.
+ */
+function passwordMatches(password) {
+  if (ADMIN_PASSWORD_HASH.startsWith('scrypt:')) {
+    const [, saltHex, hashHex] = ADMIN_PASSWORD_HASH.split(':')
+    if (!saltHex || !hashHex) return false
+    const expected = Buffer.from(hashHex, 'hex')
+    const actual = crypto.scryptSync(password, Buffer.from(saltHex, 'hex'), expected.length, SCRYPT_PARAMS)
+    return crypto.timingSafeEqual(actual, expected)
+  }
+  return safeEqual(sha256(`${ADMIN_SALT}::${password}`), ADMIN_PASSWORD_HASH)
+}
+const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }
+if (!ADMIN_PASSWORD_HASH.startsWith('scrypt:')) {
+  console.warn('[security] ADMIN_PASSWORD_HASH в старом формате SHA-256 — перейдите на scrypt: node scripts/hash-admin-password.mjs')
+}
+
 const TOKEN_TTL_MS = 12 * 60 * 60 * 1000
 
 function issueToken() {
@@ -177,6 +211,8 @@ function issueToken() {
 function verifyToken(token) {
   const [exp, sig] = String(token ?? '').split('.')
   if (!exp || !sig) return false
+    // токен не может «жить» дольше, чем мы вообще выдаём
+  if (Number(exp) > Date.now() + TOKEN_TTL_MS + 60_000) return false
   const expected = crypto.createHmac('sha256', TOKEN_SECRET).update(exp).digest('hex')
   try {
     if (!crypto.timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'))) return false
@@ -210,27 +246,76 @@ function makeLimiter({ windowMs, max }) {
 const submitLimiterIp = makeLimiter({ windowMs: 60 * 60 * 1000, max: 10 }) // 10 заявок/час с IP
 const submitLimiterEmail = makeLimiter({ windowMs: 24 * 60 * 60 * 1000, max: 5 }) // 5/сутки на email
 
-// Прогрессивная блокировка входа по IP
-const loginFails = new Map()
-function loginLockSeconds(ip) {
-  const st = loginFails.get(ip)
-  if (!st) return 0
-  return Math.max(0, Math.ceil((st.lockedUntil - Date.now()) / 1000))
+// Блокировка перебора пароля. Счётчик в БД, а не в памяти: на Vercel каждый
+// холодный старт функции обнулял бы in-memory счётчик, и перебор шёл бы
+// без ограничений. Плюс общий потолок на все адреса — против ботнета.
+const LOGIN_WINDOW_MIN = 15
+const LOGIN_MAX_PER_IP = 5
+const LOGIN_MAX_GLOBAL = 50
+
+let loginTableReady = null
+function ensureLoginTable() {
+  loginTableReady ??= pool
+    .query(
+      `CREATE TABLE IF NOT EXISTS admin_login_failures (
+         ip_hash text NOT NULL,
+         created_at timestamptz NOT NULL DEFAULT now()
+       );
+       CREATE INDEX IF NOT EXISTS admin_login_failures_created_idx ON admin_login_failures (created_at DESC);`
+    )
+    .catch((e) => {
+      loginTableReady = null
+      throw e
+    })
+  return loginTableReady
 }
-function registerLoginFail(ip) {
-  const st = loginFails.get(ip) ?? { count: 0, lockedUntil: 0 }
-  st.count += 1
-  if (st.count % 5 === 0) {
-    st.lockedUntil = Date.now() + 30_000 * 4 ** (st.count / 5 - 1)
+
+/** IP хранится только как HMAC — это персональные данные, а нужно лишь равенство. */
+const hashIp = (ip) => crypto.createHmac('sha256', TOKEN_SECRET).update(ip).digest('hex').slice(0, 32)
+
+async function loginBlocked(ipHash) {
+  await ensureLoginTable()
+  const { rows } = await pool.query(
+    `SELECT count(*)::int AS total, count(*) FILTER (WHERE ip_hash = $1)::int AS mine
+       FROM admin_login_failures
+      WHERE created_at > now() - make_interval(mins => $2)`,
+    [ipHash, LOGIN_WINDOW_MIN]
+  )
+  return rows[0].mine >= LOGIN_MAX_PER_IP || rows[0].total >= LOGIN_MAX_GLOBAL
+}
+
+async function noteLoginFailure(ipHash) {
+  await ensureLoginTable()
+  await pool.query('INSERT INTO admin_login_failures (ip_hash) VALUES ($1)', [ipHash])
+  await pool.query(`DELETE FROM admin_login_failures WHERE created_at < now() - interval '1 day'`)
+}
+
+/**
+ * Настоящий адрес посетителя. На Vercel — x-real-ip: его ставит сама
+ * платформа, клиент подделать не может. На VPS перед нами ровно один nginx,
+ * поэтому доверяем одному прокси (trust proxy = 1), а не всей цепочке
+ * X-Forwarded-For, которую клиент пишет сам.
+ */
+function clientIp(req) {
+  if (process.env.VERCEL) return String(req.headers['x-real-ip'] ?? '').trim() || req.ip || 'unknown'
+  return req.ip ?? 'unknown'
+}
+
+/** Запрос пришёл с нашей же страницы (сравнение точного хоста, не суффикса). */
+function sameOrigin(req) {
+  const src = req.headers.origin || req.headers.referer
+  if (!src) return false
+  try {
+    return new URL(src).host === (req.headers['x-forwarded-host'] || req.headers.host)
+  } catch {
+    return false
   }
-  loginFails.set(ip, st)
-  return loginLockSeconds(ip)
 }
 
 // ---- приложение -------------------------------------------------------------
 
 const app = express()
-app.set('trust proxy', true)
+app.set('trust proxy', 1)
 app.disable('x-powered-by') // не палим стек (Express) потенциальному атакующему
 
 // Единая CSP: инлайн-скриптов на сайте нет (только module-скрипт из index.html),
@@ -243,10 +328,10 @@ const CSP = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data:",
-  "connect-src 'self' https://formsubmit.co",
+  "connect-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
-  "form-action 'self' https://formsubmit.co",
+  "form-action 'self'",
   "frame-ancestors 'none'",
   'upgrade-insecure-requests',
 ].join('; ')
@@ -259,6 +344,7 @@ app.use((req, res, next) => {
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()')
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin')
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin')
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000')
   // API-ответы (в т.ч. содержащие заявки) никогда не кешируются прокси/браузером
   if (req.path.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store')
   next()
@@ -267,8 +353,9 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '32kb' }))
 
 app.post('/api/applications', async (req, res) => {
-  const ip = req.ip ?? 'unknown'
-  const b = req.body ?? {}
+  const ip = clientIp(req)
+  if (!sameOrigin(req)) return res.status(403).json({ error: 'origin' })
+  const b = req.body && typeof req.body === 'object' ? req.body : {}
 
   // honeypot: боты заполняют всё подряд — отвечаем «успехом», ничего не сохраняя
   if (b._honey) return res.json({ ok: true })
@@ -290,6 +377,17 @@ app.post('/api/applications', async (req, res) => {
 
   if (!submitLimiterIp(ip) || !submitLimiterEmail(email)) {
     return res.status(429).json({ error: 'rate_limit' })
+  }
+  // In-memory лимит живёт в пределах одного инстанса; повтор по email
+  // проверяем ещё и в БД — это переживает холодные старты.
+  try {
+    const { rows } = await pool.query(
+      `SELECT count(*)::int AS n FROM applications WHERE email = $1 AND created_at > now() - interval '1 day'`,
+      [email]
+    )
+    if (rows[0].n >= 5) return res.status(429).json({ error: 'rate_limit' })
+  } catch (e) {
+    console.error('rate check failed (заявка пропущена дальше):', e.message)
   }
 
   let insertedId
@@ -323,18 +421,25 @@ app.post('/api/applications', async (req, res) => {
   vercelWaitUntil?.(bitrixTask)
 })
 
-app.post('/api/admin/login', (req, res) => {
-  const ip = req.ip ?? 'unknown'
-  const locked = loginLockSeconds(ip)
-  if (locked > 0) return res.status(429).json({ error: 'locked', retryAfter: locked })
+app.post('/api/admin/login', async (req, res) => {
+  if (!sameOrigin(req)) return res.status(403).json({ error: 'origin' })
+  const ipHash = hashIp(clientIp(req))
+  try {
+    if (await loginBlocked(ipHash)) {
+      return res.status(429).json({ error: 'locked', retryAfter: LOGIN_WINDOW_MIN * 60 })
+    }
+  } catch (e) {
+    console.error('login throttle check failed:', e.message)
+    return res.status(503).json({ error: 'unavailable' })
+  }
 
-  const password = String(req.body?.password ?? '')
-  if (sha256(`${ADMIN_SALT}::${password}`) === ADMIN_PASSWORD_HASH) {
-    loginFails.delete(ip)
+  const password = String(req.body?.password ?? '').slice(0, 256)
+  if (password && passwordMatches(password)) {
     return res.json({ token: issueToken() })
   }
-  const lockSeconds = registerLoginFail(ip)
-  res.status(401).json({ error: 'invalid', retryAfter: lockSeconds })
+  await noteLoginFailure(ipHash).catch((e) => console.error('login failure log failed:', e.message))
+  console.warn(`[security] неудачный вход в админку (ip ${ipHash.slice(0, 8)})`)
+  res.status(401).json({ error: 'invalid', retryAfter: 0 })
 })
 
 app.get('/api/applications', async (req, res) => {
