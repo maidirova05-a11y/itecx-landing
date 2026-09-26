@@ -16,7 +16,10 @@
   width: 250px;
   flex: none;
   border-radius: 50%;
+  /* 1280×800 texture (was 500×313): the sphere is scaled up to 2.1× and
+     shown on Retina screens, so the old file was stretched ~3× and blurry. */
   background: url("/earth-texture.jpg");
+  background-image: image-set(url("/earth-texture.webp") type("image/webp"), url("/earth-texture.jpg") type("image/jpeg"));
   background-size: cover;
   background-position: left;
   animation: earthRotate 30s linear 0s infinite;

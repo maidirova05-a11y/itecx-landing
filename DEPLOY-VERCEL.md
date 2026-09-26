@@ -56,6 +56,10 @@ Project → **Settings → Environment Variables** (для Production):
 
 `DATABASE_URL` уже добавлен интеграцией Neon.
 
+Рекомендуется заменить `ADMIN_PASSWORD_HASH` на scrypt-хэш:
+`node scripts/hash-admin-password.mjs` (скрытый ввод пароля) — и вставить
+выведенное значение `scrypt:…`. `ADMIN_SALT` для него не нужен.
+
 ## 5. Deploy
 
 Deployments → **Redeploy** (или просто `git push` — Vercel деплоит каждый
