@@ -1,0 +1,12 @@
+.git
+.github
+node_modules
+dist
+dist-ssr
+.ssr-build
+.env
+server/.env
+*.local
+docker.env
+backups
+*.log

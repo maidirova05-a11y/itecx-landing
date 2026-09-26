@@ -29,3 +29,7 @@ server/.env
 .vercel
 
 .vercel
+
+# Docker-версия и резервные копии (см. BACKUP.md)
+docker.env
+backups/
