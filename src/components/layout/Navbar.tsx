@@ -46,6 +46,27 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // Подсветка текущего раздела в меню: наблюдаем за секциями, на которые
+  // ссылается навигация, и помечаем ту, что пересекает середину экрана.
+  const [active, setActive] = useState<string | null>(null)
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return
+    const sections = content.nav
+      .map((item) => document.querySelector<HTMLElement>(item.href))
+      .filter((el): el is HTMLElement => el !== null)
+    if (sections.length === 0) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) setActive(`#${entry.target.id}`)
+        }
+      },
+      { rootMargin: '-45% 0px -50% 0px' },
+    )
+    sections.forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [content.nav])
+
   // Escape closes the mobile menu and returns focus to the toggle button.
   useEffect(() => {
     if (!menuOpen) return
@@ -92,7 +113,10 @@ export function Navbar() {
             <a
               key={item.href}
               href={item.href}
-              className="press whitespace-nowrap text-[13px] text-text-muted hover:text-text xl:text-[14px]"
+              aria-current={active === item.href ? 'true' : undefined}
+              className={`press whitespace-nowrap text-[13px] hover:text-text xl:text-[14px] ${
+                active === item.href ? 'text-text' : 'text-text-muted'
+              }`}
               style={{ transitionProperty: 'color, transform' }}
             >
               {item.label}

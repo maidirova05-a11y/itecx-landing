@@ -26,6 +26,15 @@ export function Footer() {
           </a>
         </nav>
       </Container>
+
+      <Container className="mt-10">
+        <div
+          className="border-t pt-6 text-[12px] text-text-faint"
+          style={{ borderColor: 'var(--color-hairline)' }}
+        >
+          © {new Date().getFullYear()} ITECX
+        </div>
+      </Container>
     </footer>
   )
 }
