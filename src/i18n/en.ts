@@ -383,7 +383,8 @@ export const en: Content = {
         id: 'cookies',
         title: 'Cookies',
         paragraphs: [
-          'There are no advertising or analytics cookies on this site. Only technical values are kept in your browser storage:',
+          'There are no advertising cookies on this site. Visit statistics are collected by Yandex.Metrica: it sets its own cookies and records, without identifying you, which pages were opened, navigation and on-page actions. You can turn it off by blocking cookies in your browser or with a content blocker.',
+          'Besides that, technical values are kept in your browser storage:',
         ],
         items: [
           'the interface language you chose — so the right version opens on your next visit',

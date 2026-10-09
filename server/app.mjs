@@ -318,17 +318,20 @@ const app = express()
 app.set('trust proxy', 1)
 app.disable('x-powered-by') // не палим стек (Express) потенциальному атакующему
 
-// Единая CSP: инлайн-скриптов на сайте нет (только module-скрипт из index.html),
+// Единая CSP: инлайн-скриптов на сайте нет (только module-скрипт и metrika.js из index.html),
 // поэтому script-src можно держать строгим — это гасит XSS даже при найденной
 // дыре. style-src разрешает 'unsafe-inline', т.к. сайт активно использует
 // inline style в React (иначе пришлось бы городить nonce на каждый узел).
 const CSP = [
   "default-src 'self'",
-  "script-src 'self'",
+  // mc.yandex.ru / yastatic.net — Яндекс.Метрика (public/metrika.js).
+  "script-src 'self' https://mc.yandex.ru https://yastatic.net",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
-  "img-src 'self' data:",
-  "connect-src 'self'",
+  "img-src 'self' data: https://mc.yandex.ru https://mc.yandex.kz https://mc.yandex.com",
+  "connect-src 'self' https://mc.yandex.ru https://mc.yandex.kz https://mc.yandex.com",
+  "frame-src blob: https://mc.yandex.ru",
+  "child-src blob: https://mc.yandex.ru",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

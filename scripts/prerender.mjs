@@ -50,6 +50,9 @@ if (!template.includes(ROOT_DIV)) {
 // индексировать чужую ссылку), а canonical на главную заявляет, что /admin и
 // «/» — одна и та же страница. Обе строки правим здесь, в единственном месте,
 // где этот файл создаётся.
+//
+// Счётчик Метрики из панели тоже убираем: Вебвизор записывает экран, а в
+// панели — заявки с персональными данными участников.
 await writeFile(
   path.join(dist, 'admin.html'),
   template
@@ -57,7 +60,9 @@ await writeFile(
       /<meta name="robots"[^>]*>/,
       '<meta name="robots" content="noindex, nofollow" />',
     )
-    .replace(/<link rel="canonical"[^>]*>/, ''),
+    .replace(/<link rel="canonical"[^>]*>/, '')
+    .replace(/\s*<!-- Yandex\.Metrika counter[\s\S]*?<!-- \/Yandex\.Metrika counter -->/, '')
+    .replace(/\s*<noscript><div><img src="https:\/\/mc\.yandex\.ru\/watch\/[^]*?<\/noscript>/, ''),
 )
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
