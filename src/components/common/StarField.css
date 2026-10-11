@@ -1,6 +1,6 @@
 /* Twinkling 4-point sparkle stars — decorative section background.
-   Same construction as the hero's stars (four curved-corner quarters),
-   namespaced separately so sections don't depend on CssEarth.css. */
+   Each star is built from four curved-corner quarters,
+   namespaced separately so sections stay self-contained. */
 
 .sf-field {
   position: absolute;

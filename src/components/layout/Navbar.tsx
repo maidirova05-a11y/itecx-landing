@@ -87,7 +87,7 @@ export function Navbar() {
 
   return (
     <header
-      className="fixed inset-x-0 top-0 z-50 border-b transition-colors duration-300"
+      className="intro-nav fixed inset-x-0 top-0 z-50 border-b transition-colors duration-300"
       style={{
         borderColor: scrolled || menuOpen ? 'var(--color-hairline)' : 'transparent',
         background:

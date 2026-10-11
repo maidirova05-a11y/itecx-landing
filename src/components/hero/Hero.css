@@ -1,0 +1,420 @@
+/* Hero opening sequence.
+   Every element's BASE style is its final frame; the keyframes (fill-mode
+   `both`) supply the starting state. So with reduced motion — animations
+   switched off — the hero simply renders finished. */
+
+.hero {
+  /* Timeline */
+  --t-planet: 0.1s;
+  --t-atmo: 0.5s;
+  --t-shaft: 1.3s;
+  --t-beam: 1.85s;
+  --t-mark: 2.85s;
+  --t-word: 3.3s;
+  --t-tag: 3.85s;
+  --t-copy: 4s;
+
+  /* Geometry */
+  --x-h: clamp(180px, 34svh, 360px);
+  --x-w: calc(var(--x-h) * 420 / 520);
+  --waist: 48.08%; /* 250 / 520 — where the X arms meet */
+  --planet-d: max(170vw, 900px);
+
+  --blue: 92 162 255;
+  --red: 227 31 45;
+}
+
+/* ---------- Sky ---------- */
+
+.hero-sky {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 50% at 50% 100%, rgb(20 51 94 / 0.35), transparent 70%),
+    radial-gradient(40% 35% at 50% 40%, rgb(var(--red) / 0.06), transparent 70%);
+  animation: heroFade 2.4s var(--ease-out-soft) var(--t-planet) both;
+}
+
+/* ---------- Lockup: beams → X → wordmark ---------- */
+
+.hero-lockup {
+  position: relative;
+  width: var(--x-w);
+  height: var(--x-h);
+}
+
+/* Red shaft rising out from behind the horizon up to the X waist. Its bottom
+   lies far below the horizon (hidden by the planet), so growing it from the
+   bottom reads as light climbing up over the planet's edge. */
+.hero-shaft {
+  position: absolute;
+  left: 50%;
+  top: var(--waist);
+  width: 3px;
+  height: 100svh;
+  margin-left: -1.5px;
+  transform-origin: 50% 100%;
+  background: linear-gradient(to bottom, #fff, rgb(255 90 100) 4%, rgb(var(--red) / 0.9) 30%, rgb(var(--red) / 0.4));
+  box-shadow:
+    0 0 10px 1px rgb(var(--red) / 0.9),
+    0 0 36px 6px rgb(var(--red) / 0.45);
+  border-radius: 2px;
+  opacity: 0;
+  animation: heroShaft 1.2s var(--ease-out-soft) var(--t-shaft) both;
+}
+
+@keyframes heroShaft {
+  0% {
+    opacity: 1;
+    transform: scaleY(0);
+  }
+  55% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(1);
+  }
+}
+
+/* Two light beams crossing at the waist. They spring out vertically from the
+   shaft's tip, then scissor open to the logo's ±34° arms and stay on as faint
+   streaks running past the solid mark. */
+.hero-beam {
+  --beam-len: calc(var(--x-h) * 1.75);
+  position: absolute;
+  left: 50%;
+  top: var(--waist);
+  width: 3px;
+  height: var(--beam-len);
+  margin-left: -1.5px;
+  margin-top: calc(var(--beam-len) / -2);
+  border-radius: 3px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgb(var(--red) / 0.9) 22%,
+    rgb(255 120 128) 46%,
+    #fff 50%,
+    rgb(255 120 128) 54%,
+    rgb(var(--red) / 0.9) 78%,
+    transparent
+  );
+  opacity: 0.4;
+}
+.hero-beam::before {
+  content: "";
+  position: absolute;
+  inset: 0 -10px;
+  background: inherit;
+  filter: blur(12px);
+  opacity: 0.85;
+}
+.hero-beam--a {
+  transform: rotate(34deg);
+  animation: heroBeamA 1.5s var(--ease-out-premium) var(--t-beam) both;
+}
+.hero-beam--b {
+  transform: rotate(-34deg);
+  animation: heroBeamB 1.5s var(--ease-out-premium) var(--t-beam) both;
+}
+
+@keyframes heroBeamA {
+  0% {
+    opacity: 1;
+    transform: rotate(0deg) scaleY(0);
+  }
+  22% {
+    opacity: 1;
+    transform: rotate(0deg) scaleY(1);
+  }
+  68% {
+    opacity: 1;
+    transform: rotate(34deg) scaleY(1);
+  }
+  100% {
+    opacity: 0.4;
+    transform: rotate(34deg) scaleY(1);
+  }
+}
+@keyframes heroBeamB {
+  0% {
+    opacity: 1;
+    transform: rotate(0deg) scaleY(0);
+  }
+  22% {
+    opacity: 1;
+    transform: rotate(0deg) scaleY(1);
+  }
+  68% {
+    opacity: 1;
+    transform: rotate(-34deg) scaleY(1);
+  }
+  100% {
+    opacity: 0.4;
+    transform: rotate(-34deg) scaleY(1);
+  }
+}
+
+/* Burst of light at the crossing point the moment the X locks in */
+.hero-flash {
+  position: absolute;
+  left: 50%;
+  top: var(--waist);
+  width: calc(var(--x-h) * 0.9);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, #fff, rgb(255 110 120 / 0.8) 25%, rgb(var(--red) / 0.25) 55%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  animation: heroFlash 0.9s var(--ease-out-soft) var(--t-mark) both;
+}
+
+@keyframes heroFlash {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+/* The solid mark materialises out of the beams */
+.hero-x {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 28px rgb(var(--red) / 0.38));
+  animation: heroMark 1s var(--ease-out-premium) var(--t-mark) both;
+}
+
+@keyframes heroMark {
+  0% {
+    opacity: 0;
+    transform: scale(1.12);
+    filter: blur(10px) brightness(2.2) drop-shadow(0 0 40px rgb(var(--red) / 0.9));
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0) brightness(1) drop-shadow(0 0 28px rgb(var(--red) / 0.38));
+  }
+}
+
+/* Wordmark sits in the X's waist, exactly like the BrandMark lockup */
+.hero-wordmark {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  translate: -50% -50%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  --word-size: calc(var(--x-w) * 0.24);
+}
+
+.hero-wordmark-text {
+  display: flex;
+  font-size: var(--word-size);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  white-space: nowrap;
+  color: var(--color-text);
+  text-shadow: 0 2px 24px rgb(0 0 0 / 0.55);
+}
+
+.hero-letter {
+  display: inline-block;
+  animation: heroLetter 0.7s var(--ease-out-premium) both;
+}
+.hero-letter.is-accent {
+  color: var(--color-accent);
+}
+
+@keyframes heroLetter {
+  0% {
+    opacity: 0;
+    transform: translateY(0.35em) scale(0.9);
+    filter: blur(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+.hero-tagline {
+  margin-top: calc(var(--word-size) * 0.08);
+  font-size: calc(var(--word-size) * 0.38);
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  color: rgb(255 255 255 / 0.85);
+  animation: heroTagline 0.8s var(--ease-out-premium) var(--t-tag) both;
+}
+
+@keyframes heroTagline {
+  0% {
+    opacity: 0;
+    transform: translateX(-0.6em);
+    letter-spacing: 0.3em;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    letter-spacing: 0;
+  }
+}
+
+/* ---------- Planet ---------- */
+
+/* Anchored to the top of the copy block: the planet's top edge IS the horizon */
+.hero-planet-wrap {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: var(--planet-d);
+  height: var(--planet-d);
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: heroRise 2s var(--ease-out-premium) var(--t-planet) both;
+}
+
+@keyframes heroRise {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(28svh);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Blue air glow hanging above the limb */
+.hero-atmosphere {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 92%;
+  height: 46svh;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(var(--blue) / 0.55), rgb(var(--blue) / 0.16) 55%, transparent);
+  filter: blur(28px);
+  animation: heroAtmo 2.4s var(--ease-out-soft) var(--t-atmo) both;
+}
+
+@keyframes heroAtmo {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.5) scaleY(0.4);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hero-planet {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #05080f;
+  box-shadow:
+    0 0 0 1px rgb(190 220 255 / 0.6),
+    0 -2px 8px rgb(200 228 255 / 0.85),
+    0 -8px 34px rgb(var(--blue) / 0.75),
+    0 -30px 120px rgb(var(--blue) / 0.45);
+}
+
+/* Night-side surface: the Earth texture, heavily darkened. It spins in fast as
+   the planet rises and decelerates to a full stop (one texture period = -50%,
+   so the end frame lines up seamlessly with the base style). */
+.hero-planet::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 22%;
+  background: url("/earth-texture.jpg") 0 0 / 50% 100% repeat-x;
+  background-image: image-set(url("/earth-texture.webp") type("image/webp"), url("/earth-texture.jpg") type("image/jpeg"));
+  opacity: 0.4;
+  filter: saturate(0.6) hue-rotate(10deg);
+  animation: heroSpin 3.4s cubic-bezier(0.12, 0.55, 0.2, 1) var(--t-planet) both;
+}
+
+/* Atmospheric scattering along the limb + falloff into the dark side */
+.hero-planet::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(to bottom, rgb(var(--blue) / 0.22), rgb(6 8 13 / 0.6) 3%, rgb(6 8 13 / 0.94) 12%, #06080d 22%);
+  box-shadow:
+    inset 0 14px 30px -8px rgb(var(--blue) / 0.7),
+    inset 0 2px 4px rgb(220 238 255 / 0.6);
+}
+
+@keyframes heroSpin {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* ---------- Copy ---------- */
+
+.hero-copy {
+  animation: heroCopy 0.9s var(--ease-out-premium) both;
+}
+
+@keyframes heroCopy {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes heroFade {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* The navbar waits for the intro to land (class set in Navbar) */
+.intro-nav {
+  animation: heroFade 0.8s var(--ease-out-soft) 4s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero *,
+  .hero *::before,
+  .hero *::after,
+  .intro-nav {
+    animation: none !important;
+  }
+}
