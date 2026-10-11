@@ -1,17 +1,7 @@
 import type { ReactNode } from 'react'
 
-/**
- * Doubles as the section's real h2 — sized small on purpose (visual scale and
- * document heading level are independent), so screen-reader users still get a
- * correct outline while the design keeps its restrained "eyebrow" look.
- */
+/** Small mono label with a glowing red point. Rendered as a <p>: the section's
+ * real heading is the title that follows it (see SectionHeader). */
 export function SectionKicker({ children }: { children: ReactNode }) {
-  return (
-    <h2
-      className="font-mono text-[11px] font-medium uppercase tracking-[0.16em]"
-      style={{ color: 'var(--color-accent-soft)' }}
-    >
-      {children}
-    </h2>
-  )
+  return <p className="kicker">{children}</p>
 }

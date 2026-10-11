@@ -16,7 +16,9 @@ const isAdmin = currentPath === '/admin' || currentPath === '/admin.html'
 // Политика конфиденциальности — отдельная страница с запечённой разметкой
 // (dist/privacy.ru.html и т.д.; адреса переписываются на них, см. vercel.json).
 const isPrivacy = currentPath === '/privacy' || /^\/privacy\.(ru|kk|en)\.html$/.test(currentPath)
-const page = isPrivacy ? 'privacy' : 'home'
+// Руководство участника — так же, запечённые dist/guide.html, guide.kk.html…
+const isGuide = currentPath === '/guide' || /^\/guide\.(ru|kk|en)\.html$/.test(currentPath)
+const page = isPrivacy ? 'privacy' : isGuide ? 'guide' : 'home'
 
 // Панель организатора не должна попадать в поисковую выдачу: перекрываем
 // глобальный robots-тег на noindex именно для /admin (в robots.txt она тоже

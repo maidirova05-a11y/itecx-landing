@@ -78,11 +78,12 @@ function readSavedLang(): Lang {
 
 const SITE_URL = 'https://itecx.kz'
 
-/** Страницы сайта: лендинг и политика конфиденциальности (/privacy).
+/** Страницы сайта: лендинг, руководство участника (/guide) и политика
+ * конфиденциальности (/privacy).
  * Роутера в проекте нет — страница выбирается по pathname в main.tsx. */
-export type Page = 'home' | 'privacy'
+export type Page = 'home' | 'guide' | 'privacy'
 
-const PAGE_PATH: Record<Page, string> = { home: '', privacy: '/privacy' }
+const PAGE_PATH: Record<Page, string> = { home: '', guide: '/guide', privacy: '/privacy' }
 
 /**
  * Адрес страницы на нужном языке: / · /kk · /en/privacy и т.д.
@@ -95,6 +96,13 @@ const PAGE_PATH: Record<Page, string> = { home: '', privacy: '/privacy' }
 export function pathFor(page: Page, lang: Lang): string {
   const prefix = lang === 'ru' ? '' : `/${lang}`
   return `${prefix}${PAGE_PATH[page]}` || '/'
+}
+
+/** title и description конкретной страницы поверх общих для сайта. */
+export function seoForPage(c: Content, page: Page) {
+  if (page === 'privacy') return { ...c.seo, ...c.privacy.seo }
+  if (page === 'guide') return { ...c.seo, ...c.guide.seo }
+  return c.seo
 }
 
 function canonicalFor(lang: Lang, page: Page): string {
@@ -116,9 +124,9 @@ function upsertMeta(selector: string, attr: 'name' | 'property', key: string, co
  * превью в мессенджерах/соцсетях при шаринге страницы на нужном языке. */
 function applySeo(lang: Lang, page: Page) {
   const c = dictionaries[lang]
-  // У /privacy собственные title и description — иначе страница показалась бы
-  // в выдаче и в превью мессенджеров как дубль лендинга.
-  const seo = page === 'privacy' ? { ...c.seo, ...c.privacy.seo } : c.seo
+  // У /guide и /privacy собственные title и description — иначе страница
+  // показалась бы в выдаче и в превью мессенджеров как дубль лендинга.
+  const seo = seoForPage(c, page)
   const url = canonicalFor(lang, page)
   document.documentElement.lang = lang
   document.title = seo.title

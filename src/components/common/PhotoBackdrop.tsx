@@ -1,9 +1,7 @@
 /**
- * Full-bleed section photo with a dual scrim: a diagonal gradient so text on
- * the left/top stays readable, and a vertical fade so the section blends into
- * the flat-color sections above/below instead of ending in a hard photo edge.
- * `tone` should match whatever solid background the section used before
- * (var(--color-ink) or var(--color-surface)) so the seam is invisible.
+ * Full-bleed section photo under a heavy scrim: fades to `tone` at the top and
+ * bottom so the section blends into its neighbours, and darkens toward the
+ * left where the text sits.
  */
 import { webpFor } from './webp'
 
@@ -11,11 +9,15 @@ export function PhotoBackdrop({
   src,
   objectPosition = 'center',
   tone = 'var(--color-ink)',
+  strength = 0.82,
 }: {
   src: string
   objectPosition?: string
   tone?: string
+  /** 0–1: how much of the photo the side scrim hides */
+  strength?: number
 }) {
+  const pct = Math.round(strength * 100)
   return (
     <>
       {/* display:contents у <picture> — чтобы обёртка не ломала абсолютное
@@ -36,13 +38,13 @@ export function PhotoBackdrop({
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
         style={{
-          background: `linear-gradient(105deg, ${tone} 22%, color-mix(in srgb, ${tone} 78%, transparent) 45%, color-mix(in srgb, ${tone} 40%, transparent) 75%)`,
+          background: `linear-gradient(100deg, ${tone} 15%, color-mix(in srgb, ${tone} ${pct}%, transparent) 50%, color-mix(in srgb, ${tone} ${Math.round(pct * 0.45)}%, transparent))`,
         }}
       />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
-        style={{ background: `linear-gradient(to top, ${tone} 0%, transparent 30%, transparent 78%, ${tone} 100%)` }}
+        style={{ background: `linear-gradient(to top, ${tone}, transparent 35%, transparent 70%, ${tone})` }}
       />
     </>
   )

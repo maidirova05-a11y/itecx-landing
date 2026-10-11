@@ -1,18 +1,14 @@
 import type { ReactNode } from 'react'
 
-/** Frosted card used to keep content readable when a section has a photo backdrop. */
-export function GlassCard({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return (
-    <div
-      className={`rounded-lg border ${className}`}
-      style={{
-        borderColor: 'var(--color-hairline-strong)',
-        background: 'color-mix(in srgb, var(--color-surface-1) 88%, transparent)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-      }}
-    >
-      {children}
-    </div>
-  )
+/** Frosted card with a faint top light; `hover` adds the blue-rim lift. */
+export function GlassCard({
+  children,
+  className = '',
+  hover = false,
+}: {
+  children: ReactNode
+  className?: string
+  hover?: boolean
+}) {
+  return <div className={`card ${hover ? 'card-hover' : ''} ${className}`}>{children}</div>
 }

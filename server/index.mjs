@@ -32,8 +32,10 @@ const sendPage = (file) => (_req, res) => res.sendFile(path.join(dist, file))
 for (const lang of ['kk', 'en']) {
   app.get(`/${lang}`, sendPage(`index.${lang}.html`))
   app.get(`/${lang}/privacy`, sendPage(`privacy.${lang}.html`))
+  app.get(`/${lang}/guide`, sendPage(`guide.${lang}.html`))
 }
 app.get('/privacy', sendPage('privacy.html'))
+app.get('/guide', sendPage('guide.html'))
 
 app.use(express.static(dist))
 app.get('/admin', (_req, res) => res.sendFile(path.join(dist, 'admin.html')))

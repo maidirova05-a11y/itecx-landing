@@ -5,7 +5,7 @@ import { ru } from './i18n/ru'
 import { en } from './i18n/en'
 import { kk } from './i18n/kk'
 import type { Content } from './i18n/ru'
-import type { Lang, Page } from './i18n'
+import { seoForPage, type Lang, type Page } from './i18n'
 
 /** Отдаёт разметку страницы на нужном языке. Вызывается при сборке из
  * scripts/prerender.mjs — по файлу на каждую пару «страница × язык», чтобы
@@ -34,13 +34,14 @@ const OG_IMAGE = `${SITE_URL}/og-image.png`
  * документ не может быть обновлён в двух разных числах.
  */
 const LAST_MODIFIED: Record<Page, string> = {
-  home: '2026-08-17',
+  home: '2026-10-12',
+  guide: '2026-10-12',
   privacy: '2026-08-17',
 }
 
 const dictionaries: Record<Lang, Content> = { ru, kk, en }
 const LANGS: Lang[] = ['ru', 'kk', 'en']
-const PAGE_PATH: Record<Page, string> = { home: '', privacy: '/privacy' }
+const PAGE_PATH: Record<Page, string> = { home: '', guide: '/guide', privacy: '/privacy' }
 
 /** Канонический адрес: / · /kk · /en/privacy. Должен совпадать с pathFor()
  * в i18n/index.tsx, иначе клиент после гидратации перепишет canonical на
@@ -55,13 +56,12 @@ function canonical(page: Page, lang: Lang): string {
  * и т.п., на них ведут rewrites с /kk и /en. Языки разведены по разным путям,
  * поэтому правила ни с чем не конфликтуют. */
 function fileFor(page: Page, lang: Lang): string {
-  const base = page === 'home' ? 'index' : 'privacy'
+  const base = page === 'home' ? 'index' : page
   return lang === 'ru' ? `${base}.html` : `${base}.${lang}.html`
 }
 
 function seoFor(page: Page, lang: Lang) {
-  const c = dictionaries[lang]
-  return page === 'privacy' ? { ...c.seo, ...c.privacy.seo } : c.seo
+  return seoForPage(dictionaries[lang], page)
 }
 
 /** Общая для всех страниц «шапка» графа: организация и сайт. Ссылки по @id
@@ -132,7 +132,7 @@ function pageGraph(page: Page, lang: Lang) {
     dateModified: LAST_MODIFIED[page],
   }
 
-  if (page === 'privacy') {
+  if (page === 'privacy' || page === 'guide') {
     return [
       webPage,
       {
@@ -140,7 +140,12 @@ function pageGraph(page: Page, lang: Lang) {
         '@id': `${url}#breadcrumb`,
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: c.footer.name, item: canonical('home', lang) },
-          { '@type': 'ListItem', position: 2, name: c.privacy.title, item: url },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: page === 'guide' ? c.guide.kicker : c.privacy.title,
+            item: url,
+          },
         ],
       },
     ]
@@ -194,7 +199,7 @@ export interface PrerenderTarget {
   lastmod: string
 }
 
-export const targets: PrerenderTarget[] = (['home', 'privacy'] as Page[]).flatMap((page) =>
+export const targets: PrerenderTarget[] = (['home', 'guide', 'privacy'] as Page[]).flatMap((page) =>
   LANGS.map((lang) => {
     const c = dictionaries[lang]
     const seo = seoFor(page, lang)
@@ -236,8 +241,8 @@ export const targets: PrerenderTarget[] = (['home', 'privacy'] as Page[]).flatMa
  * сами HTML-файлы, — разъехаться им негде.
  */
 export function buildSitemap(): string {
-  const priority = (t: PrerenderTarget) => (t.page === 'home' ? '1.0' : '0.3')
-  const changefreq = (t: PrerenderTarget) => (t.page === 'home' ? 'weekly' : 'yearly')
+  const priority = (t: PrerenderTarget) => ({ home: '1.0', guide: '0.7', privacy: '0.3' })[t.page]
+  const changefreq = (t: PrerenderTarget) => ({ home: 'weekly', guide: 'monthly', privacy: 'yearly' })[t.page]
 
   const urls = targets
     .map((t) => {

@@ -19,12 +19,20 @@
       "destination": "/privacy.:lang.html"
     },
     {
+      "source": "/:lang(kk|en)/guide",
+      "destination": "/guide.:lang.html"
+    },
+    {
       "source": "/:lang(kk|en)",
       "destination": "/index.:lang.html"
     },
     {
       "source": "/privacy",
       "destination": "/privacy.html"
+    },
+    {
+      "source": "/guide",
+      "destination": "/guide.html"
     }
   ],
   "headers": [

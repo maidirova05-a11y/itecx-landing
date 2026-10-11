@@ -1,17 +1,13 @@
 import { Navbar } from './components/layout/Navbar'
 import { Footer } from './components/layout/Footer'
 import { Hero } from './components/hero/Hero'
-import { VisionMission } from './components/sections/VisionMission'
-import { Goals } from './components/sections/Goals'
 import { About } from './components/sections/About'
+import { Mission } from './components/sections/Mission'
 import { Formats } from './components/sections/Formats'
 import { Stages } from './components/sections/Stages'
 import { ItalyDeepDive } from './components/sections/ItalyDeepDive'
-import { Format } from './components/sections/Format'
-import { Rules } from './components/sections/Rules'
-import { Criteria } from './components/sections/Criteria'
-import { Process } from './components/sections/Process'
-import { ProjectJourney } from './components/sections/ProjectJourney'
+import { Requirements } from './components/sections/Requirements'
+import { GuideTeaser } from './components/sections/GuideTeaser'
 import { Faq } from './components/sections/Faq'
 import { Apply } from './components/sections/Apply'
 import { useLanguage } from './i18n'
@@ -32,17 +28,13 @@ function App() {
       <Navbar />
       <main id="main-content">
         <Hero />
-        <VisionMission />
-        <Goals />
         <About />
+        <Mission />
         <Formats />
         <Stages />
         <ItalyDeepDive />
-        <Format />
-        <Rules />
-        <Criteria />
-        <Process />
-        <ProjectJourney />
+        <Requirements />
+        <GuideTeaser />
         <Faq />
         <Apply />
       </main>

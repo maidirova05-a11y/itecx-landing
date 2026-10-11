@@ -51,7 +51,9 @@ export function Navbar() {
   const [active, setActive] = useState<string | null>(null)
   useEffect(() => {
     if (typeof IntersectionObserver === 'undefined') return
+    // Пункты-страницы (/guide) пропускаем: наблюдать можно только якоря.
     const sections = content.nav
+      .filter((item) => item.href.startsWith('#'))
       .map((item) => document.querySelector<HTMLElement>(item.href))
       .filter((el): el is HTMLElement => el !== null)
     if (sections.length === 0) return

@@ -4,10 +4,10 @@ import type { Content } from './ru'
 export const en: Content = {
   nav: [
     { label: 'About', href: '#about' },
-    { label: 'Participation formats', href: '#formats' },
-    { label: 'Congress stages', href: '#stages' },
-    { label: 'Criteria', href: '#criteria' },
-    { label: 'International stage', href: '#italy' },
+    { label: 'Formats', href: '#formats' },
+    { label: 'Stages', href: '#stages' },
+    { label: 'Italy', href: '#italy' },
+    { label: 'Guide', href: '/en/guide' },
     { label: 'FAQ', href: '#faq' },
   ],
 
@@ -15,237 +15,193 @@ export const en: Content = {
     eyebrow: 'International scientific platform',
     title: 'ITECX — a congress in science, engineering, and mathematics',
     subtitle:
-      'Advancing fundamental and applied research in engineering, technology, and mathematics.',
+      'Research by school students, university students, and scientists — from the school stage to the international final in Italy.',
     ctaPrimary: 'About the congress',
-    ctaSecondary: 'International stage in Italy',
+    ctaSecondary: 'Final in Italy',
   },
 
   about: {
     kicker: 'About the congress',
-    fullName:
-      'ITECX is an abbreviation of First Fibonacci International Congress on Engineering, Technology, and Mathematics',
-    description:
-      'It is an international scientific platform dedicated to advancing fundamental and applied research in engineering, technology, and mathematics.',
-    tracks: [
-      { name: 'ITECX college', description: 'a congress for school students in grades 3–11' },
-      { name: 'ITECX academic', description: 'a congress for university students, lecturers, and professors' },
-    ],
-    fill: ['Insightful talks', 'Engaging discussions', 'Networking opportunities'],
-    closing:
-      'A wide range of topics and innovative research is meant to inspire participants, fostering collaboration between universities and international scientific institutes. The congress encourages interdisciplinary research and brings together scientists from different fields.',
+    title: 'The First Fibonacci International Congress on Engineering, Technology, and Mathematics',
+    fullName: 'Known as ITECX',
+    text: 'A scientific platform where school students, university students, and teachers present their research, join discussions, and meet like-minded people from universities around the world.',
   },
 
-  vision: {
-    kicker: 'Vision & mission',
-    visionTitle: 'Our vision',
-    visionText:
-      'The ITECX congress strives to develop young talent and working professionals in science, engineering, and mathematics — nurturing a generation of future leaders capable of proposing innovative solutions and strengthening global scientific collaboration.',
-    missionTitle: 'Our mission',
-    missionIntro:
-      'ITECX builds an educational and communication platform that helps students and researchers to:',
-    missionPoints: [
-      'Refine research and project work skills',
-      'Develop cross-cultural collaboration',
-      'Shape scientific thinking at the international level',
-    ],
-    missionClosing:
-      'The congress fosters knowledge exchange and unites the efforts of scientists from around the world.',
-  },
-
-  goals: {
-    kicker: 'Congress goals',
-    groups: [
+  mission: {
+    kicker: 'Mission',
+    title: 'Raising a generation of researchers ready to offer world-class solutions',
+    items: [
       {
-        title: 'Advancing science, technology, and innovation',
-        points: [
-          'Giving school students, teachers, and professors the opportunity to present their innovations and projects in science and technology on an academic platform',
-          'Creating conditions for students to develop innovative projects in science, engineering, and mathematics',
-          'Promoting new solutions through discussion of technology integration in education',
-          'Encouraging students’ contribution to the development of educational technology and innovation',
-        ],
+        title: 'Research skills',
+        text: 'Research, project work, and scientific writing guided by mentors.',
       },
       {
-        title: 'International exchange and collaboration',
-        points: [
-          'Opportunities for knowledge exchange and collaboration among students of different cultures worldwide',
-          'Sustaining cross-cultural exchange of experience through the presentation of student projects at the global level',
-        ],
+        title: 'International exchange',
+        text: 'Meeting scientists and students from other countries and presenting in English.',
+      },
+      {
+        title: 'Innovation in education',
+        text: 'Projects that bring new technology into learning.',
       },
     ],
   },
 
   formats: {
     kicker: 'Participation formats',
-    college: {
-      name: 'ITECX college',
-      age: 'grades 3–11',
-      categories: ['Educational technology', 'science', 'mathematics', 'engineering'],
-      participants: 'Present their research papers and projects',
-      structure: ['School stage', 'National congress', 'International congress (Italy)'],
-    },
-    academic: {
-      name: 'ITECX academic',
-      age: 'university students, lecturers, professors',
-      categories: ['Educational technology', 'science', 'mathematics', 'engineering'],
-      participants:
-        'Present their research reports and projects and share their work within the academic community',
-      structure: ['National congress', 'International congress (Italy)'],
-    },
+    title: 'Two tracks — one scientific standard',
+    categoriesLabel: 'Fields',
+    categories: ['Educational technology', 'Science', 'Mathematics', 'Engineering'],
+    tracks: [
+      {
+        name: 'ITECX college',
+        audience: 'School students, grades 3–11',
+        text: 'Present their research papers and projects.',
+        path: ['School stage', 'National congress', 'Final in Italy'],
+      },
+      {
+        name: 'ITECX academic',
+        audience: 'University students, lecturers, and professors',
+        text: 'Give research talks and share their work with the academic community.',
+        path: ['National congress', 'Final in Italy'],
+      },
+    ],
   },
 
   stages: {
-    kicker: 'Congress structure',
+    kicker: 'Stages',
+    title: 'A project’s path from school to Italy',
     items: [
       {
         step: '01',
         title: 'School stage',
-        text: 'At the school stage, participants’ projects are evaluated and selected by a jury of school teachers for participation in the national (republican) congress. Participants must prepare their presentations or projects in a strictly defined format.',
+        text: 'Each school holds its own congress. A jury of teachers selects the best projects.',
       },
       {
         step: '02',
         title: 'National congress',
-        text: 'Projects selected at the school congress are presented at the national level. These presentations are evaluated by a jury of educators and scientists. National projects will be considered for publication in a Fibonacci-indexed scientific journal, and successful papers will be presented on an international academic platform.',
+        text: 'A jury of educators and scientists evaluates the work. The best projects advance to the international final.',
       },
       {
         step: '03',
-        title: 'International congress',
-        text: 'Projects successfully presented at the national congress qualify for the international final, which will take place in Italy. Participants will present their projects to educators, scientists, and students from the scientific world, taking part in academic discussions. Presentations are judged both on scientific quality and on presentation skills. Each participant prepares a research paper and a poster suitable for a scientific congress.',
+        title: 'Final in Italy',
+        text: 'A talk and a poster in English before scientists and students from many countries.',
       },
     ],
+    note: 'At every stage, teachers and mentors help with research, data collection, and scientific writing.',
   },
 
   italyStage: {
     kicker: 'International stage',
-    title: 'The international congress takes place in Italy',
-    text: 'Projects selected at the national level receive an invitation to Italy to take part in the international final. Works presented at national congresses are evaluated by an extended jury in accordance with academic standards.',
+    title: 'The final takes place in Italy',
+    text: 'Projects that pass the national selection are invited to Italy. An extended jury evaluates them against academic standards.',
+    publicationTitle: 'Publication in Fibonacci',
     publication:
-      'Projects that succeed in the international final are considered for publication in the indexed scientific journal Fibonacci. This process gives students valuable experience in scientific publishing.',
+      'The best works of the final are considered for publication in the indexed scientific journal Fibonacci.',
   },
 
-  format: {
-    kicker: 'Format',
+  requirements: {
+    kicker: 'Requirements',
+    title: 'What participants prepare',
     items: [
       {
-        title: 'Oral presentations',
-        text: 'Research projects may be presented orally in an academic setting. Presentations are limited to 10 minutes.',
-      },
-      {
-        title: 'Poster presentations',
-        text: 'Presentations with visual materials and text explaining the essence of the project.',
-      },
-      {
+        value: '4',
+        unit: 'sections',
         title: 'Research paper',
-        text: 'Each student prepares a paper in the format of a research article stating the aim of the study, methods, results, and conclusions.',
+        text: 'Introduction, methodology, results, and conclusions.',
+      },
+      {
+        value: '10',
+        unit: 'min',
+        title: 'Oral talk',
+        text: 'A presentation to the jury in an academic format.',
+      },
+      {
+        value: '5',
+        unit: 'min',
+        title: 'Poster',
+        text: 'A poster defense with visual materials.',
       },
     ],
-  },
-
-  rules: {
-    kicker: 'Terms and rules of participation',
-    items: [
+    rules: [
       {
         title: 'Language',
-        text: 'At the national level, presentations and papers must be delivered in the native language. Participants admitted to the international congress must present in English.',
+        text: 'Your native language at the national stage, English at the international one.',
       },
       {
         title: 'Originality',
-        text: 'Projects must be original and free of plagiarism. All citations must be properly formatted.',
-      },
-      {
-        title: 'Presentation duration',
-        text: 'Oral talks are limited to 10 minutes and poster presentations to 5 minutes.',
-      },
-      {
-        title: 'Format',
-        text: 'Projects must be formatted as a research article and include the following sections: Introduction, Methodology, Results, Conclusions.',
+        text: 'Your own work only, free of plagiarism, with all citations properly formatted.',
       },
     ],
   },
 
   criteria: {
-    kicker: 'Evaluation criteria',
-    intro:
-      'Works submitted to the scientific congresses are evaluated against specific, objective criteria. The evaluation process considers factors such as scientific content, innovative approach, rigor of research methods, and presentation skills.',
+    kicker: 'Criteria',
+    title: 'How projects are evaluated',
+    intro: 'The jury evaluates every work against six objective criteria.',
     items: [
-      {
-        title: 'Scientific depth',
-        text: 'Measures how academically developed the project is.',
-        aspects: ['Hypothesis formulation', 'Data analysis', 'Reliability of results'],
-      },
-      {
-        title: 'Innovation',
-        text: 'Assesses the presence of creative ideas in the project.',
-        aspects: ['Innovative approach', 'New technologies'],
-      },
-      {
-        title: 'Contribution to education',
-        text: 'Determines how the research supports the educational process and how applicable its results are to learning.',
-        aspects: [],
-      },
-      {
-        title: 'Research methods',
-        text: 'The validity and reliability of the research methods used in the work.',
-        aspects: [],
-      },
-      {
-        title: 'Presentation skills',
-        text: 'Presenting the work in an effective and clear manner.',
-        aspects: [],
-      },
-      {
-        title: 'Research paper',
-        text: 'Prepared in accordance with research article standards. The format, quality of content, and compliance with academic requirements are evaluated.',
-        aspects: [],
-      },
-    ],
-  },
-
-  process: {
-    kicker: 'Congress process',
-    items: [
-      {
-        step: '1',
-        title: 'Preparation and organization',
-        text: 'Teachers and mentors help students conduct research and prepare projects.',
-        support: ['scientific writing', 'data collection', 'analysis of results'],
-      },
-      {
-        step: '2',
-        title: 'Organizing school congresses',
-        text: 'Each school holds a scientific congress where students present and defend their projects. The best works advance to the national level.',
-        support: [],
-      },
-      {
-        step: '3',
-        title: 'Holding national congresses',
-        text: 'Projects selected at the national level receive an invitation to Italy for the international final. Works presented at national congresses are evaluated by an extended jury in accordance with academic standards.',
-        support: [],
-      },
-      {
-        step: '4',
-        title: 'International congress and publication in Italy',
-        text: 'Projects that succeed in the international final are considered for publication in the indexed scientific journal Fibonacci. This process gives students valuable experience in scientific publishing.',
-        support: [],
-      },
+      { title: 'Scientific depth', text: 'Hypothesis, data analysis, and reliability of results.', aspects: ['Hypothesis formulation', 'Data analysis', 'Reliability of results'] },
+      { title: 'Innovation', text: 'A creative approach and use of new technology.', aspects: ['Innovative approach', 'New technologies'] },
+      { title: 'Contribution to education', text: 'How applicable the results are to learning.', aspects: [] },
+      { title: 'Research methods', text: 'How sound and reliable the chosen methods are.', aspects: [] },
+      { title: 'Presentation', text: 'Clarity and persuasiveness of the talk.', aspects: [] },
+      { title: 'Research paper', text: 'Structure, writing quality, and compliance with academic standards.', aspects: [] },
     ],
   },
 
   projectJourney: {
-    kicker: 'Project creation guide',
-    steps: [
-      'Choosing a topic',
-      'Conducting research',
-      'Collecting data',
-      'Choosing a methodology',
-      'Formulating a hypothesis',
-      'Analyzing data',
-      'Drawing conclusions',
-      'Writing the research paper',
-      'Receiving feedback',
-      'Preparing the presentation',
-      'Preparing the poster',
-      'Submitting the application',
+    kicker: 'How to build a project',
+    title: '12 steps to a finished work',
+    phases: [
+      {
+        title: 'Research',
+        steps: [
+          { title: 'Choosing a topic', hint: 'A question you care about and can actually test.' },
+          { title: 'Formulating a hypothesis', hint: 'An assumption your research will confirm or refute.' },
+          { title: 'Choosing a methodology', hint: 'Experiment, survey, modeling, or calculation — whatever fits the task.' },
+          { title: 'Conducting research', hint: 'Follow the plan and record every step.' },
+          { title: 'Collecting data', hint: 'The measurements and observations your conclusions rest on.' },
+          { title: 'Analyzing data', hint: 'Process the results: tables, charts, statistics.' },
+        ],
+      },
+      {
+        title: 'Research paper',
+        steps: [
+          { title: 'Drawing conclusions', hint: 'Answer the original question: was the hypothesis confirmed?' },
+          { title: 'Writing the research paper', hint: 'Introduction, methodology, results, and conclusions.' },
+          { title: 'Getting feedback', hint: 'Show the work to your mentor and address the comments.' },
+        ],
+      },
+      {
+        title: 'Defense',
+        steps: [
+          { title: 'Preparing the presentation', hint: 'A talk of up to 10 minutes with a clear structure.' },
+          { title: 'Preparing the poster', hint: 'A visual board for the five-minute defense.' },
+          { title: 'Submitting the application', hint: 'Register for the congress through the form on the site.' },
+        ],
+      },
     ],
+  },
+
+  guideTeaser: {
+    kicker: 'Participant guide',
+    title: 'How to build a project — and how it’s judged',
+    text: '12 steps from choosing a topic to applying and the jury’s 6 criteria — on a separate page.',
+    cta: 'Open the guide',
+  },
+
+  guide: {
+    kicker: 'Participant guide',
+    title: 'How to build a project — and how it’s judged',
+    lead: '12 steps from idea to application and the 6 criteria the jury uses.',
+    stepsLink: 'Steps',
+    criteriaLink: 'Criteria',
+    phaseLabel: 'Phase',
+    ctaTitle: 'Project ready?',
+    ctaText: 'Register — the organizers will tell you about the upcoming stage.',
+    seo: {
+      title: 'Participant guide — ITECX',
+      description: 'How to prepare a research project for the ITECX congress: 12 steps from choosing a topic to applying, and the 6 criteria the jury uses.',
+    },
   },
 
   faq: {
@@ -255,41 +211,41 @@ export const en: Content = {
     items: [
       {
         q: 'Who can take part in the ITECX congress?',
-        a: 'There are two formats. ITECX college is for school students from grade 3 to grade 11. ITECX academic is for university students, lecturers, and professors. The categories are the same: educational technology, science, mathematics, and engineering.',
+        a: 'ITECX college is for school students in grades 3–11, ITECX academic is for university students, lecturers, and professors. The fields are shared: educational technology, science, mathematics, and engineering.',
       },
       {
         q: 'What stages does the congress consist of?',
-        a: 'For school students there are three steps: the school stage, the national congress, and the international congress in Italy. The academic format has two stages — national and international.',
+        a: 'For school students: the school stage, the national congress, and the international final in Italy. The academic format starts directly at the national stage.',
       },
       {
         q: 'Which language should I present in?',
-        a: 'At the national level, presentations and papers are delivered in your native language. Participants admitted to the international congress present in English.',
+        a: 'Your native language at the national stage, English at the international final.',
       },
       {
         q: 'What does a participant need to prepare?',
-        a: 'A research paper with Introduction, Methodology, Results, and Conclusions sections, plus an oral presentation of up to 10 minutes and a poster — poster sessions are limited to 5 minutes.',
+        a: 'A research paper with four sections (introduction, methodology, results, conclusions), an oral talk of up to 10 minutes, and a poster — its defense takes 5 minutes.',
       },
       {
         q: 'How are projects evaluated?',
-        a: 'The jury looks at scientific depth, innovation, contribution to education, the soundness of the research methods, presentation skills, and whether the paper meets academic standards.',
+        a: 'Scientific depth, innovation, contribution to education, research methods, presentation skills, and the quality of the research paper.',
       },
       {
         q: 'What do participants gain?',
-        a: 'Projects that succeed at the international final are considered for publication in the indexed Fibonacci scientific journal. Participants also gain experience in academic discussion and connections with universities and researchers from other countries.',
+        a: 'The best works of the final are considered for publication in the indexed Fibonacci scientific journal. Participants also gain experience in academic discussion and meet researchers from other countries.',
       },
       {
         q: 'How do I apply?',
-        a: 'Click the "Register now" button — it opens the registration form. The organizers will get in touch and explain the upcoming stage and the timeline for preparing your work.',
+        a: 'Click “Register” — it opens the registration form. The organizers will get in touch and explain the upcoming stage and deadlines.',
       },
     ],
   },
 
   apply: {
     kicker: 'Registration',
-    title: 'Ready to take part?',
-    subtitle: 'Registration happens on a separate page — it only takes a couple of minutes.',
-    cta: 'Register now',
-    consentBefore: 'By registering you agree to our ',
+    title: 'Ready to present your project?',
+    subtitle: 'Registration takes a couple of minutes.',
+    cta: 'Register',
+    consentBefore: 'By registering, you agree to the ',
     consentLink: 'privacy policy',
     consentAfter: '.',
   },
@@ -478,9 +434,7 @@ export const en: Content = {
     mainNavAria: 'Main navigation',
     footerNavAria: 'Footer navigation',
     langAria: 'Language selection',
-    italyCta: 'International stage',
-    applyCta: 'Register now',
-    earthFlag: 'Italy · world stage',
+    applyCta: 'Register',
     privacyLink: 'Privacy Policy',
   },
 

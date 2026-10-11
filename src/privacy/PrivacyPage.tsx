@@ -2,13 +2,11 @@
  * Страница /privacy — политика конфиденциальности на трёх языках.
  *
  * Текст живёт в словарях (i18n/*.ts, ключ `privacy`), здесь только вёрстка.
- * Собственная шапка и подвал вместо общих: навигация лендинга — якоря вида
- * #about, и с отдельной страницы они бы никуда не вели.
+ * Шапка общая с /guide (SubpageHeader), подвал свой.
  */
 
 import { Container } from '../components/layout/Container'
-import { LangSwitcher } from '../components/layout/Navbar'
-import { BrandMark } from '../components/common/BrandMark'
+import { SubpageHeader } from '../components/layout/SubpageHeader'
 import { GlassCard } from '../components/common/GlassCard'
 import { Reveal } from '../components/common/Reveal'
 import { SectionKicker } from '../components/common/SectionKicker'
@@ -31,28 +29,7 @@ export function PrivacyPage() {
         {ui.skipLink}
       </a>
 
-      <header
-        className="sticky top-0 z-50 border-b"
-        style={{
-          borderColor: 'var(--color-hairline)',
-          background: 'color-mix(in srgb, var(--color-ink) 92%, transparent)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-        }}
-      >
-        <Container className="flex h-20 items-center justify-between gap-4">
-          <a href={home} className="press inline-flex items-center" aria-label="ITECX">
-            <BrandMark size={44} fontSize={14} />
-          </a>
-
-          <div className="flex items-center gap-3 sm:gap-4">
-            <a href={home} className="press hidden text-[13.5px] text-text-muted hover:text-text sm:inline">
-              ← {privacy.backHome}
-            </a>
-            <LangSwitcher ariaLabel={ui.langAria} />
-          </div>
-        </Container>
-      </header>
+      <SubpageHeader />
 
       <main id="main-content" className="py-16 md:py-24" style={{ background: 'var(--color-ink)' }}>
         <Container>
