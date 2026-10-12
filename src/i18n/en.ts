@@ -440,10 +440,10 @@ export const en: Content = {
 
   seo: {
     ogLocale: 'en_US',
-    title: 'ITECX — International Scientific Congress',
+    title: 'ITECX 2026 — International Scientific Congress for Students in Kazakhstan',
     description:
-      'ITECX — an international congress in science, engineering and mathematics. School and national stages, an international final in Italy, and publication in the Fibonacci scientific journal.',
+      'ITECX — an international congress in engineering, technology and mathematics for school students in grades 3–11, university students and researchers. School and national stages in Kazakhstan, a final in Italy and publication in the Fibonacci scientific journal.',
     keywords:
-      'ITECX, scientific congress, science, engineering, mathematics, Kazakhstan, Fibonacci, student congress, international congress, Italy, research paper',
+      'ITECX, ITECX 2026, scientific congress, international scientific congress, science conference for school students, student research conference, student research project, research paper, publish a research paper, Fibonacci journal, Fibonacci congress, engineering, technology, mathematics, STEM, educational technology, Kazakhstan, final in Italy, international science project competition, ITECX college, ITECX academic',
   },
 }
