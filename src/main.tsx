@@ -18,7 +18,9 @@ const isAdmin = currentPath === '/admin' || currentPath === '/admin.html'
 const isPrivacy = currentPath === '/privacy' || /^\/privacy\.(ru|kk|en)\.html$/.test(currentPath)
 // Руководство участника — так же, запечённые dist/guide.html, guide.kk.html…
 const isGuide = currentPath === '/guide' || /^\/guide\.(ru|kk|en)\.html$/.test(currentPath)
-const page = isPrivacy ? 'privacy' : isGuide ? 'guide' : 'home'
+// Публичная оферта — так же, запечённые dist/oferta.html, oferta.kk.html…
+const isOferta = currentPath === '/oferta' || /^\/oferta\.(ru|kk|en)\.html$/.test(currentPath)
+const page = isPrivacy ? 'privacy' : isGuide ? 'guide' : isOferta ? 'oferta' : 'home'
 
 // Панель организатора не должна попадать в поисковую выдачу: перекрываем
 // глобальный robots-тег на noindex именно для /admin (в robots.txt она тоже

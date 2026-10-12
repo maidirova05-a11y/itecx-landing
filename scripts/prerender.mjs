@@ -8,6 +8,7 @@
  * По файлу на каждую пару «страница × язык» (см. targets в entry-server.tsx):
  *   index.html · index.kk.html · index.en.html
  *   privacy.html · privacy.kk.html · privacy.en.html
+ *   oferta.html · oferta.kk.html · oferta.en.html
  * Русские версии отдаются по чистому адресу, остальные — по ?lang= через
  * rewrite (vercel.json на Vercel, server/index.mjs на VPS). Благодаря этому
  * у каждой языковой версии есть свой готовый HTML со своими title, canonical,

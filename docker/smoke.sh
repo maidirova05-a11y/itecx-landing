@@ -42,7 +42,7 @@ expect() { # expect <код> <путь> [curl-аргументы…]
 }
 
 echo "itecx: $BASE"
-for p in / /kk /en /privacy /kk/privacy /en/privacy /admin /robots.txt /sitemap.xml; do expect 200 "$p"; done
+for p in / /kk /en /privacy /kk/privacy /en/privacy /oferta /kk/oferta /en/oferta /admin /robots.txt /sitemap.xml; do expect 200 "$p"; done
 grep -q '<html lang="kk"' <<<"$(curl -s "$BASE/kk")" && ok "/kk — казахская версия" || bad "/kk не на казахском"
 
 # Заявка идёт через проверку Origin и пишется в базу.
