@@ -260,7 +260,7 @@ export const en: Content = {
     kicker: 'Legal information',
     title: 'Privacy Policy',
     updatedLabel: 'Updated',
-    updatedDate: 'August 17, 2026',
+    updatedDate: 'October 12, 2026',
     intro:
       'This document explains in plain language what data a visitor to itecx.kz leaves behind, why the ITECX organizers need it, and what you can do about it.',
     tocTitle: 'Contents',
@@ -339,7 +339,7 @@ export const en: Content = {
         id: 'cookies',
         title: 'Cookies',
         paragraphs: [
-          'There are no advertising cookies on this site. Visit statistics are collected by Yandex.Metrica: it sets its own cookies and records, without identifying you, which pages were opened, navigation and on-page actions. You can turn it off by blocking cookies in your browser or with a content blocker.',
+          'There are no advertising cookies on this site. Visit statistics are collected by Yandex.Metrica and Google Analytics: they set their own cookies and record, without identifying you, which pages were opened, navigation and on-page actions. You can turn them off by blocking cookies in your browser or with a content blocker.',
           'Besides that, technical values are kept in your browser storage:',
         ],
         items: [

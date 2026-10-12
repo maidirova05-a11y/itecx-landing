@@ -36,7 +36,7 @@ const OG_IMAGE = `${SITE_URL}/og-image.png`
 const LAST_MODIFIED: Record<Page, string> = {
   home: '2026-10-12',
   guide: '2026-10-12',
-  privacy: '2026-08-17',
+  privacy: '2026-10-12',
   oferta: '2026-10-12',
 }
 
