@@ -38,6 +38,9 @@ const PAGES = [
   ['/privacy',    'privacy.html',     { indexable: true, lang: 'ru' }],
   ['/kk/privacy', 'privacy.kk.html',  { indexable: true, lang: 'kk' }],
   ['/en/privacy', 'privacy.en.html',  { indexable: true, lang: 'en' }],
+  ['/oferta',     'oferta.html',      { indexable: true, lang: 'ru' }],
+  ['/kk/oferta',  'oferta.kk.html',   { indexable: true, lang: 'kk' }],
+  ['/en/oferta',  'oferta.en.html',   { indexable: true, lang: 'en' }],
 ];
 /* ─────────────────────────────────────────────────────────────────────────
  * Общая часть проверки. Ниже, под ── НАСТРОЙКИ ──, лежит всё, что отличает

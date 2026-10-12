@@ -24,6 +24,9 @@ export function Footer() {
           <a href={pathFor('privacy', lang)} className="press text-[13px] text-text-faint hover:text-text">
             {ui.privacyLink}
           </a>
+          <a href={pathFor('oferta', lang)} className="press text-[13px] text-text-faint hover:text-text">
+            {ui.offerLink}
+          </a>
         </nav>
       </Container>
 

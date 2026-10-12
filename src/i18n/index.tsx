@@ -78,12 +78,12 @@ function readSavedLang(): Lang {
 
 const SITE_URL = 'https://itecx.kz'
 
-/** Страницы сайта: лендинг, руководство участника (/guide) и политика
- * конфиденциальности (/privacy).
+/** Страницы сайта: лендинг, руководство участника (/guide), политика
+ * конфиденциальности (/privacy) и публичная оферта (/oferta).
  * Роутера в проекте нет — страница выбирается по pathname в main.tsx. */
-export type Page = 'home' | 'guide' | 'privacy'
+export type Page = 'home' | 'guide' | 'privacy' | 'oferta'
 
-const PAGE_PATH: Record<Page, string> = { home: '', guide: '/guide', privacy: '/privacy' }
+const PAGE_PATH: Record<Page, string> = { home: '', guide: '/guide', privacy: '/privacy', oferta: '/oferta' }
 
 /**
  * Адрес страницы на нужном языке: / · /kk · /en/privacy и т.д.
@@ -102,6 +102,7 @@ export function pathFor(page: Page, lang: Lang): string {
 export function seoForPage(c: Content, page: Page) {
   if (page === 'privacy') return { ...c.seo, ...c.privacy.seo }
   if (page === 'guide') return { ...c.seo, ...c.guide.seo }
+  if (page === 'oferta') return { ...c.seo, ...c.oferta.seo }
   return c.seo
 }
 

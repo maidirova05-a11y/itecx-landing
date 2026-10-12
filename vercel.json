@@ -19,6 +19,10 @@
       "destination": "/privacy.:lang.html"
     },
     {
+      "source": "/:lang(kk|en)/oferta",
+      "destination": "/oferta.:lang.html"
+    },
+    {
       "source": "/:lang(kk|en)/guide",
       "destination": "/guide.:lang.html"
     },
@@ -33,6 +37,10 @@
     {
       "source": "/guide",
       "destination": "/guide.html"
+    },
+    {
+      "source": "/oferta",
+      "destination": "/oferta.html"
     }
   ],
   "headers": [

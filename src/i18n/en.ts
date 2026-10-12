@@ -427,6 +427,132 @@ export const en: Content = {
     },
   },
 
+  oferta: {
+    kicker: 'Legal',
+    title: 'Public Offer',
+    updatedLabel: 'Updated',
+    updatedDate: '18 February 2026',
+    intro:
+      'Terms for paid educational services: payment, refunds, the rights and obligations of the parties and the details of the Contractor, AZ GROUP LLC.',
+    tocTitle: 'Contents',
+    rights: '© AZ GROUP LLC. All rights reserved.',
+    sections: [
+      {
+        id: 'oferta-s1',
+        title: 'General provisions',
+        blocks: [
+          '1.1. This Offer sets out the procedure and terms for the paid educational services provided by the Contractor. These include olympiads, championships, trainings, courses, webinars, seminars, trips abroad and other events held under the AZ GROUP brand.',
+          '1.2. Acceptance of this Offer means the Customer’s full and unconditional agreement with all of its terms and is equivalent to concluding a service agreement.',
+          '1.3. Acceptance is deemed to be full or partial payment by the Customer for the Contractor’s services (including payment by instalments).',
+          '1.4. If the agreement is concluded in the interests of a minor, acceptance is made by the minor’s legal representative, who confirms that they have legal grounds to act on the minor’s behalf.',
+        ],
+      },
+      {
+        id: 'oferta-s2',
+        title: 'Subject of the agreement',
+        blocks: [
+          '2.1. The Contractor undertakes to provide the Customer with educational services (olympiads, trainings, seminars, courses, tuition, webinars and other events), and the Customer undertakes to pay for them according to the established rates.',
+          '2.2. The list, content, dates, format, duration and cost of the services are published on the Contractor’s official website https://az-group.kz, in information letters and in official materials.',
+          '2.3. If a particular service by its nature requires a separate written agreement (including comprehensive programmes, long-term study, international trips, or cases required by the legislation of the Republic of Kazakhstan), the parties conclude a separate agreement. In that case the terms of the separate agreement prevail over the terms of this Offer.',
+        ],
+      },
+      {
+        id: 'oferta-s3',
+        title: 'Rights and obligations of the parties',
+        blocks: [
+          '3.1. The Contractor undertakes to:',
+          [
+            'organise and hold the event in accordance with the announced programme;',
+            'notify the Customer if the time, venue or format of the event changes;',
+            'process personal data in accordance with the legislation of the Republic of Kazakhstan.',
+          ],
+          '3.2. The Customer undertakes to:',
+          [
+            'pay for the selected service on time;',
+            'not distribute educational and methodological materials without the Contractor’s written consent;',
+            'provide accurate and truthful information when registering.',
+          ],
+        ],
+      },
+      {
+        id: 'oferta-s4',
+        title: 'Cost of services and payment procedure',
+        blocks: [
+          '4.1. The cost of services is set by the Contractor and published on the official website and/or in official information materials.',
+          '4.2. Payment is made in the national currency of the Republic of Kazakhstan, the tenge (KZT), by bank transfer, including online payment and instalments.',
+          '4.3. Payment is considered made when the funds are received in the Contractor’s bank account.',
+        ],
+      },
+      {
+        id: 'oferta-s5',
+        title: 'Cancellation and refunds',
+        blocks: [
+          '5.1. The Customer may withdraw from the agreement before the service begins.',
+          '5.2. In the event of cancellation, the amount paid is refunded minus the expenses actually incurred by the Contractor in arranging the Customer’s participation.',
+          '5.3. Such expenses may include:',
+          [
+            'registration fees charged by the event organisers;',
+            'venue bookings;',
+            'preparation of personalised materials;',
+            'bank fees;',
+            'visa fees;',
+            'non-refundable air tickets;',
+            'accommodation booking costs;',
+            'other obligations to third parties.',
+          ],
+          '5.4. If the service includes travel or international participation, the amount withheld may depend on the terms of third parties (airlines, hotels, partners and other service providers).',
+          '5.5. If the service has been partially provided, the refund is made in proportion to the part not provided, minus the expenses incurred.',
+        ],
+      },
+      {
+        id: 'oferta-s6',
+        title: 'Liability of the parties',
+        blocks: [
+          '6.1. The parties are liable in accordance with the legislation of the Republic of Kazakhstan.',
+          '6.2. The parties are released from liability for failure to perform their obligations in the event of force majeure in accordance with Article 359 of the Civil Code of the Republic of Kazakhstan.',
+          '6.3. The Contractor is not liable if participation becomes impossible for reasons attributable to the Customer (visa refusal, breach of entry rules, failure to meet the event’s requirements, etc.).',
+        ],
+      },
+      {
+        id: 'oferta-s7',
+        title: 'Personal data',
+        blocks: [
+          '7.1. The Customer consents to the processing and storage of their personal data for the purpose of performing this Offer.',
+          '7.2. Personal data is processed in accordance with the Law of the Republic of Kazakhstan “On Personal Data and Their Protection”.',
+        ],
+      },
+      {
+        id: 'oferta-s8',
+        title: 'Final provisions',
+        blocks: [
+          '8.1. This Offer is valid indefinitely from the moment it is published on the Contractor’s website.',
+          '8.2. The Contractor may amend the Offer. The new version applies to legal relations arising after the date of its publication.',
+          '8.3. Disputes are settled through negotiation; if no agreement is reached, they are resolved in court in accordance with the legislation of the Republic of Kazakhstan.',
+        ],
+      },
+    ],
+    details: {
+      id: 'oferta-s9',
+      title: 'Contractor’s details',
+      rows: [
+        { label: 'Company', value: 'AZ GROUP LLC (limited liability partnership)', href: '' },
+        { label: 'Address', value: '27 Askar Tokpanov St., Ak-Bulak-3 residential area, Astana, Republic of Kazakhstan', href: '' },
+        { label: 'BIN', value: '241140003039', href: '' },
+        { label: 'Bank', value: 'Kaspi Bank JSC', href: '' },
+        { label: 'KBe', value: '17', href: '' },
+        { label: 'BIC', value: 'CASPKZKA', href: '' },
+        { label: 'Account number', value: 'KZ04722S000042220281', href: '' },
+        { label: 'E-mail', value: 'info@az-group.kz', href: 'mailto:info@az-group.kz' },
+        { label: 'Website', value: 'https://az-group.kz', href: 'https://az-group.kz' },
+      ],
+    },
+    seo: {
+      title: 'Public Offer — ITECX',
+      description:
+        'The AZ GROUP LLC public offer for paid educational services: terms of participation, payment, refunds and the Contractor’s details.',
+    },
+  },
+
   ui: {
     skipLink: 'Skip to content',
     menuOpen: 'Open menu',
@@ -436,14 +562,15 @@ export const en: Content = {
     langAria: 'Language selection',
     applyCta: 'Register',
     privacyLink: 'Privacy Policy',
+    offerLink: 'Public Offer',
   },
 
   seo: {
     ogLocale: 'en_US',
-    title: 'ITECX — International Scientific Congress',
+    title: 'ITECX 2026 — International Scientific Congress for Students in Kazakhstan',
     description:
-      'ITECX — an international congress in science, engineering and mathematics. School and national stages, an international final in Italy, and publication in the Fibonacci scientific journal.',
+      'ITECX — an international congress in engineering, technology and mathematics for school students in grades 3–11, university students and researchers. School and national stages in Kazakhstan, a final in Italy and publication in the Fibonacci scientific journal.',
     keywords:
-      'ITECX, scientific congress, science, engineering, mathematics, Kazakhstan, Fibonacci, student congress, international congress, Italy, research paper',
+      'ITECX, ITECX 2026, scientific congress, international scientific congress, science conference for school students, student research conference, student research project, research paper, publish a research paper, Fibonacci journal, Fibonacci congress, engineering, technology, mathematics, STEM, educational technology, Kazakhstan, final in Italy, international science project competition, ITECX college, ITECX academic',
   },
 }

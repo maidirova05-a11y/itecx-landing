@@ -37,11 +37,12 @@ const LAST_MODIFIED: Record<Page, string> = {
   home: '2026-10-12',
   guide: '2026-10-12',
   privacy: '2026-08-17',
+  oferta: '2026-10-12',
 }
 
 const dictionaries: Record<Lang, Content> = { ru, kk, en }
 const LANGS: Lang[] = ['ru', 'kk', 'en']
-const PAGE_PATH: Record<Page, string> = { home: '', guide: '/guide', privacy: '/privacy' }
+const PAGE_PATH: Record<Page, string> = { home: '', guide: '/guide', privacy: '/privacy', oferta: '/oferta' }
 
 /** Канонический адрес: / · /kk · /en/privacy. Должен совпадать с pathFor()
  * в i18n/index.tsx, иначе клиент после гидратации перепишет canonical на
@@ -132,7 +133,7 @@ function pageGraph(page: Page, lang: Lang) {
     dateModified: LAST_MODIFIED[page],
   }
 
-  if (page === 'privacy' || page === 'guide') {
+  if (page === 'privacy' || page === 'guide' || page === 'oferta') {
     return [
       webPage,
       {
@@ -143,7 +144,7 @@ function pageGraph(page: Page, lang: Lang) {
           {
             '@type': 'ListItem',
             position: 2,
-            name: page === 'guide' ? c.guide.kicker : c.privacy.title,
+            name: page === 'guide' ? c.guide.kicker : page === 'oferta' ? c.oferta.title : c.privacy.title,
             item: url,
           },
         ],
@@ -199,7 +200,7 @@ export interface PrerenderTarget {
   lastmod: string
 }
 
-export const targets: PrerenderTarget[] = (['home', 'guide', 'privacy'] as Page[]).flatMap((page) =>
+export const targets: PrerenderTarget[] = (['home', 'guide', 'privacy', 'oferta'] as Page[]).flatMap((page) =>
   LANGS.map((lang) => {
     const c = dictionaries[lang]
     const seo = seoFor(page, lang)
@@ -241,8 +242,8 @@ export const targets: PrerenderTarget[] = (['home', 'guide', 'privacy'] as Page[
  * сами HTML-файлы, — разъехаться им негде.
  */
 export function buildSitemap(): string {
-  const priority = (t: PrerenderTarget) => ({ home: '1.0', guide: '0.7', privacy: '0.3' })[t.page]
-  const changefreq = (t: PrerenderTarget) => ({ home: 'weekly', guide: 'monthly', privacy: 'yearly' })[t.page]
+  const priority = (t: PrerenderTarget) => ({ home: '1.0', guide: '0.7', privacy: '0.3', oferta: '0.3' })[t.page]
+  const changefreq = (t: PrerenderTarget) => ({ home: 'weekly', guide: 'monthly', privacy: 'yearly', oferta: 'yearly' })[t.page]
 
   const urls = targets
     .map((t) => {

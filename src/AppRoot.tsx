@@ -1,6 +1,7 @@
 import App from './App.tsx'
 import { PrivacyPage } from './privacy/PrivacyPage.tsx'
 import { GuidePage } from './guide/GuidePage.tsx'
+import { OfertaPage } from './oferta/OfertaPage.tsx'
 import { LanguageProvider, type Lang, type Page } from './i18n'
 
 /** Дерево страницы — общее для гидратации в браузере (main.tsx) и для
@@ -13,7 +14,15 @@ import { LanguageProvider, type Lang, type Page } from './i18n'
 export function AppRoot({ page = 'home', lang }: { page?: Page; lang?: Lang }) {
   return (
     <LanguageProvider page={page} initialLang={lang}>
-      {page === 'privacy' ? <PrivacyPage /> : page === 'guide' ? <GuidePage /> : <App />}
+      {page === 'privacy' ? (
+        <PrivacyPage />
+      ) : page === 'guide' ? (
+        <GuidePage />
+      ) : page === 'oferta' ? (
+        <OfertaPage />
+      ) : (
+        <App />
+      )}
     </LanguageProvider>
   )
 }
