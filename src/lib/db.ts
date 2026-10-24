@@ -4,6 +4,8 @@
  * живут на одном origin.
  */
 
+import { getAttribution } from './registration'
+
 export interface ApplicationRow {
   id: string
   created_at: string
@@ -16,6 +18,14 @@ export interface ApplicationRow {
   message: string | null
   /** ID сделки в Bitrix24, если синхронизация прошла успешно (иначе null). */
   bitrix_deal_id: string | null
+  /** Маркетинговая атрибуция визита (см. lib/registration.ts); null, если меток не было. */
+  utm_source: string | null
+  utm_medium: string | null
+  utm_campaign: string | null
+  utm_content: string | null
+  utm_term: string | null
+  referrer: string | null
+  landing_path: string | null
 }
 
 export interface ApplicationInput {
@@ -34,7 +44,9 @@ export async function insertApplication(input: ApplicationInput): Promise<void> 
   const res = await fetch('/api/applications', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+    // Метки источника (utm, реферер, страница входа) снимаются при первом
+    // визите и уходят вместе с заявкой — сервер пишет их в БД и в Bitrix24.
+    body: JSON.stringify({ ...input, ...getAttribution() }),
   })
   if (res.status === 429) throw new RateLimitError('rate limit')
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -58,4 +70,13 @@ export async function fetchApplications(token: string): Promise<ApplicationRow[]
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const body = (await res.json()) as { rows: ApplicationRow[] }
   return body.rows
+}
+
+/** CSV-выгрузка всех заявок (включая метки источника) — тот же токен, что и у списка. */
+export async function fetchApplicationsCsv(token: string): Promise<Blob> {
+  const res = await fetch('/api/applications.csv', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.blob()
 }

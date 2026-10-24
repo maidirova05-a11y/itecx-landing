@@ -2,6 +2,7 @@ import { StrictMode, Suspense, lazy } from 'react'
 import { createRoot, hydrateRoot } from 'react-dom/client'
 import './index.css'
 import { AppRoot } from './AppRoot.tsx'
+import { captureAttribution } from './lib/registration'
 
 // Скрытый маршрут панели организатора: /admin. Ссылок на него на сайте нет,
 // код панели лежит в отдельном чанке и посетителям лендинга не загружается.
@@ -31,6 +32,10 @@ if (isAdmin) {
   robots.setAttribute('content', 'noindex, nofollow')
   document.title = 'ITECX — Панель организатора'
 }
+
+// Метки источника визита (utm, реферер, страница входа) — снимаем до того,
+// как i18n перепишет адрес; в панели организатора они не нужны.
+if (!isAdmin) captureAttribution()
 
 const container = document.getElementById('root')!
 

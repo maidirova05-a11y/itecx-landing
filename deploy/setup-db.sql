@@ -34,9 +34,25 @@ CREATE TABLE IF NOT EXISTS applications (
   track text NOT NULL,
   organization text,
   message text,
-  bitrix_deal_id text
+  bitrix_deal_id text,
+  -- Маркетинговая атрибуция визита (utm-метки, реферер, страница входа).
+  -- Приложение само добавит недостающие колонки через ADD COLUMN IF NOT EXISTS
+  -- (server/app.mjs → ensureSchema), здесь они перечислены для полноты.
+  utm_source text,
+  utm_medium text,
+  utm_campaign text,
+  utm_content text,
+  utm_term text,
+  referrer text,
+  landing_path text
 );
 CREATE INDEX IF NOT EXISTS applications_created_at_idx ON applications (created_at DESC);
 CREATE INDEX IF NOT EXISTS applications_email_idx ON applications (email);
+-- Почасовой лимит заявок по IP (хранится HMAC адреса); чистится приложением.
+CREATE TABLE IF NOT EXISTS application_submissions (
+  ip_hash text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS application_submissions_created_idx ON application_submissions (created_at DESC);
 
 RESET ROLE;

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { BrandMark } from '../components/common/BrandMark'
 import { GlassCard } from '../components/common/GlassCard'
-import { fetchApplications, type ApplicationRow } from '../lib/db'
+import { fetchApplications, fetchApplicationsCsv, type ApplicationRow } from '../lib/db'
 import { tryLogin, isLoggedIn, logout, getToken } from './auth'
 
 const fieldClass =
@@ -109,12 +109,69 @@ function StatChip({ label, value }: { label: string; value: number }) {
   )
 }
 
+/** Хост реферера без схемы — для компактной колонки «Источник». */
+function refererHost(url: string | null): string | null {
+  if (!url) return null
+  try {
+    return new URL(url).host.replace(/^www\./, '')
+  } catch {
+    return url
+  }
+}
+
+/** Компактная подпись источника: «google / cpc», иначе хост реферера, иначе «прямой». */
+function SourceCell({ row }: { row: ApplicationRow }) {
+  const utm = [row.utm_source, row.utm_medium].filter(Boolean).join(' / ')
+  const host = refererHost(row.referrer)
+  const label = utm || host || '—'
+  const details = [
+    row.utm_campaign && `Кампания: ${row.utm_campaign}`,
+    row.utm_content && `Объявление: ${row.utm_content}`,
+    row.utm_term && `Ключ: ${row.utm_term}`,
+    row.referrer && `Реферер: ${row.referrer}`,
+    row.landing_path && `Страница входа: ${row.landing_path}`,
+  ]
+    .filter(Boolean)
+    .join('\n')
+  return (
+    <td className="max-w-[180px] truncate px-4 py-3 font-mono text-[12px] text-text-muted" title={details || 'Прямой заход'}>
+      {label}
+      {row.utm_campaign && <span className="text-text-faint"> · {row.utm_campaign}</span>}
+    </td>
+  )
+}
+
 function Dashboard() {
   const [rows, setRows] = useState<ApplicationRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [trackFilter, setTrackFilter] = useState<'all' | 'ITECX college' | 'ITECX academic'>('all')
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  // CSV скачивается через fetch с токеном в заголовке (ссылка <a href> токен
+  // передать не может), затем отдаётся браузеру как blob-файл.
+  const exportCsv = async () => {
+    const token = getToken()
+    if (!token || exporting) return
+    setExporting(true)
+    setError(null)
+    try {
+      const blob = await fetchApplicationsCsv(token)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `itecx-applications-${new Date().toISOString().slice(0, 10)}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setError(e instanceof Error && e.message.includes('401') ? 'Сессия истекла — войдите заново.' : 'Не удалось выгрузить CSV.')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const load = async () => {
     const token = getToken()
@@ -144,7 +201,7 @@ function Dashboard() {
     return rows.filter((r) => {
       if (trackFilter !== 'all' && r.track !== trackFilter) return false
       if (!q) return true
-      return [r.first_name, r.last_name, r.email, r.phone, r.organization, r.message]
+      return [r.first_name, r.last_name, r.email, r.phone, r.organization, r.message, r.utm_source, r.utm_campaign, r.referrer]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q))
     })
@@ -178,6 +235,16 @@ function Dashboard() {
               style={{ borderColor: 'var(--color-hairline-strong)' }}
             >
               {loading ? 'Обновление…' : 'Обновить'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void exportCsv()}
+              disabled={exporting || !rows?.length}
+              className="press rounded-full border px-4 py-2 text-[13px] text-text disabled:opacity-50"
+              style={{ borderColor: 'var(--color-hairline-strong)' }}
+              title="Выгрузить все заявки в CSV (включая источник)"
+            >
+              {exporting ? 'Выгрузка…' : 'Экспорт CSV'}
             </button>
             <button
               type="button"
@@ -234,7 +301,7 @@ function Dashboard() {
           className="mt-6 overflow-x-auto rounded-lg border"
           style={{ borderColor: 'var(--color-hairline)', background: 'var(--color-surface-1)' }}
         >
-          <table className="w-full min-w-[820px] text-left text-[13.5px]">
+          <table className="w-full min-w-[960px] text-left text-[13.5px]">
             <thead>
               <tr
                 className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-faint"
@@ -247,13 +314,14 @@ function Dashboard() {
                 <th className="px-4 py-3 font-medium">Формат</th>
                 <th className="px-4 py-3 font-medium">Организация</th>
                 <th className="px-4 py-3 font-medium">Комментарий</th>
+                <th className="px-4 py-3 font-medium">Источник</th>
                 <th className="px-4 py-3 font-medium">CRM</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-text-faint">
+                  <td colSpan={9} className="px-4 py-8 text-center text-text-faint">
                     {loading ? 'Загрузка…' : 'Заявок пока нет'}
                   </td>
                 </tr>
@@ -289,6 +357,7 @@ function Dashboard() {
                     <td className="max-w-[240px] truncate px-4 py-3 text-text-muted" title={r.message ?? undefined}>
                       {r.message ?? '—'}
                     </td>
+                    <SourceCell row={r} />
                     <td className="px-4 py-3 text-center" title={r.bitrix_deal_id ? `Сделка #${r.bitrix_deal_id}` : 'Не синхронизировано'}>
                       {r.bitrix_deal_id ? (
                         <span style={{ color: 'var(--color-accent-soft)' }}>✓</span>
