@@ -224,7 +224,7 @@ function Dashboard() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <div className="flex items-center gap-3">
             <BrandMark size={36} fontSize={11} />
-            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-muted">Заявки</span>
+            <h1 className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-muted">Заявки</h1>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -271,6 +271,7 @@ function Dashboard() {
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <input
             type="search"
+            aria-label="Поиск по заявкам"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Поиск: имя, email, организация…"
@@ -280,6 +281,7 @@ function Dashboard() {
             onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--color-hairline-strong)')}
           />
           <select
+            aria-label="Фильтр по формату"
             value={trackFilter}
             onChange={(e) => setTrackFilter(e.target.value as typeof trackFilter)}
             className={`${fieldClass} sm:max-w-[220px]`}
