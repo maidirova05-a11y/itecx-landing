@@ -34,9 +34,9 @@ const OG_IMAGE = `${SITE_URL}/og-image.png`
  * документ не может быть обновлён в двух разных числах.
  */
 const LAST_MODIFIED: Record<Page, string> = {
-  home: '2026-10-12',
+  home: '2026-10-24',
   guide: '2026-10-12',
-  privacy: '2026-10-12',
+  privacy: '2026-10-24',
   oferta: '2026-10-12',
 }
 
@@ -83,6 +83,9 @@ function organizationGraph(lang: Lang) {
       address: { '@type': 'PostalAddress', addressCountry: 'KZ' },
       areaServed: 'KZ',
       knowsLanguage: LANGS,
+      // Тематика организации — из словаря, чтобы совпадать с языком страницы
+      // и с направлениями, которые видит посетитель в секции «Форматы».
+      knowsAbout: c.seo.knowsAbout,
       contactPoint: {
         '@type': 'ContactPoint',
         contactType: 'admissions',
@@ -131,7 +134,12 @@ function pageGraph(page: Page, lang: Lang) {
     breadcrumb: { '@id': `${url}#breadcrumb` },
     // Та же дата, что уходит в lastmod и что видит посетитель на политике.
     dateModified: LAST_MODIFIED[page],
+    // Главная несёт ядро запросов и ссылку на FAQ; у остальных страниц
+    // keywords общие с сайтом, а mainEntity нет.
+    ...(page === 'home' ? { keywords: c.seo.keywords, mainEntity: { '@id': `${url}#faq` } } : {}),
   }
+  // Event-разметку сознательно не добавляем: точных дат этапов на сайте нет,
+  // а выдуманные даты поисковик расценит как недостоверные данные (см. SEO.md).
 
   if (page === 'privacy' || page === 'guide' || page === 'oferta') {
     return [
