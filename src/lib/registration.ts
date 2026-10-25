@@ -84,3 +84,41 @@ export function getAttribution(): Attribution {
   const source = memory ?? readStored() ?? {}
   return Object.fromEntries(Object.entries(source).filter(([, v]) => typeof v === 'string' && v)) as Attribution
 }
+
+/**
+ * Переходы к регистрации. Заявка заполняется во внешней Google-форме, куда
+ * наши метки не доходят, поэтому при клике по любой ссылке на REGISTRATION_URL
+ * отправляем на свой сервер лёгкий beacon: язык страницы, место кнопки
+ * (data-reg-location) и метки атрибуции. Без имён и контактов; переход по
+ * ссылке не задерживается — sendBeacon уходит в фоне даже при уходе со страницы.
+ */
+function sendRegistrationClick(link: HTMLAnchorElement): void {
+  const lang = document.documentElement.lang.slice(0, 2)
+  const linkLocation = link.dataset.regLocation ?? link.closest('section[id]')?.id ?? 'other'
+  const payload = JSON.stringify({ lang, linkLocation, ...getAttribution() })
+  try {
+    const blob = new Blob([payload], { type: 'application/json' })
+    if (navigator.sendBeacon?.('/api/registration-click', blob)) return
+  } catch {
+    /* sendBeacon недоступен — пробуем fetch ниже */
+  }
+  void fetch('/api/registration-click', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: payload,
+    keepalive: true,
+  }).catch(() => {})
+}
+
+/** Один делегированный слушатель на документ (main.tsx): ловит обычный клик и
+ * открытие средней кнопкой мыши. */
+export function trackRegistrationClicks(): void {
+  const handler = (e: MouseEvent) => {
+    if (e.type === 'auxclick' && e.button !== 1) return
+    const target = e.target instanceof Element ? e.target : null
+    const link = target?.closest<HTMLAnchorElement>('a[href]')
+    if (link && link.href === REGISTRATION_URL) sendRegistrationClick(link)
+  }
+  document.addEventListener('click', handler, { capture: true })
+  document.addEventListener('auxclick', handler, { capture: true })
+}

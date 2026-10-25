@@ -30,6 +30,7 @@ function RegisterButton({ label, className = '' }: { label: string; className?: 
   return (
     <a
       href={REGISTRATION_URL}
+      data-reg-location="guide-cta"
       target="_blank"
       rel="noopener noreferrer"
       className={`press rounded-full px-7 py-3.5 text-[14px] font-medium text-white ${className}`}
@@ -58,6 +59,7 @@ export function GuidePage() {
       <SubpageHeader>
         <a
           href={REGISTRATION_URL}
+          data-reg-location="guide-header"
           target="_blank"
           rel="noopener noreferrer"
           className="press hidden whitespace-nowrap rounded-full px-4 py-2.5 text-[13px] font-medium text-white lg:inline-flex"

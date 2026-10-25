@@ -276,7 +276,7 @@ export const en: Content = {
     kicker: 'Legal information',
     title: 'Privacy Policy',
     updatedLabel: 'Updated',
-    updatedDate: 'October 24, 2026',
+    updatedDate: 'October 25, 2026',
     intro:
       'This document explains in plain language what data a visitor to itecx.kz leaves behind, why the ITECX organizers need it, and what you can do about it.',
     tocTitle: 'Contents',
@@ -312,6 +312,7 @@ export const en: Content = {
         paragraphs: [
           'When the form is submitted, the server briefly sees the sender’s IP address — it is used solely to cut off spam and automated submissions. The IP address is not stored in the applications database.',
           'Traffic-source markers are stored together with the application: the utm parameters of the link you arrived through, the address of the referring site, and the page on which you opened itecx.kz. They tell the organizers which ads and publications bring participants; the markers are tied to a specific person only through the application itself.',
+          'When you click a registration button that leads to the external form (Google Forms), the site records only the fact of the click: the time, the page language, where the button was, and the same traffic-source markers. Your name, contacts and IP address are not part of this record; to prevent abuse, the server keeps only an irreversible hash of the IP address and deletes it after one day.',
           'We do not determine your location, do not build advertising profiles, and do not track you across other websites.',
         ],
         items: [],
@@ -440,7 +441,7 @@ export const en: Content = {
     seo: {
       title: 'Privacy Policy — ITECX',
       description:
-        'How the ITECX congress handles personal data submitted through the application form on itecx.kz: what we collect, why, who we share it with, how long we keep it, and how to have it deleted.',
+        'How ITECX handles personal data from applications on itecx.kz: what we collect, why, who we share it with, how long we keep it and how to delete it.',
     },
   },
 

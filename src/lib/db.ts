@@ -52,15 +52,30 @@ export async function insertApplication(input: ApplicationInput): Promise<void> 
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 }
 
-export async function adminLogin(password: string): Promise<{ token?: string; retryAfter?: number }> {
-  const res = await fetch('/api/admin/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password }),
-  })
+/** Итог попытки входа: токен, неверный пароль, блокировка перебора или сбой
+ * сервера (5xx / сеть) — последнее не должно выглядеть как «неверный пароль». */
+export type AdminLoginResult =
+  | { kind: 'ok'; token: string }
+  | { kind: 'invalid' }
+  | { kind: 'locked'; retryAfter: number }
+  | { kind: 'unavailable' }
+
+export async function adminLogin(password: string): Promise<AdminLoginResult> {
+  let res: Response
+  try {
+    res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    })
+  } catch {
+    return { kind: 'unavailable' }
+  }
   const body = (await res.json().catch(() => ({}))) as { token?: string; retryAfter?: number }
-  if (res.ok && body.token) return { token: body.token }
-  return { retryAfter: body.retryAfter ?? 0 }
+  if (res.ok && body.token) return { kind: 'ok', token: body.token }
+  if (res.status === 429) return { kind: 'locked', retryAfter: body.retryAfter || 60 }
+  if (res.status >= 500 || res.ok) return { kind: 'unavailable' }
+  return { kind: 'invalid' }
 }
 
 export async function fetchApplications(token: string): Promise<ApplicationRow[]> {
@@ -75,6 +90,30 @@ export async function fetchApplications(token: string): Promise<ApplicationRow[]
 /** CSV-выгрузка всех заявок (включая метки источника) — тот же токен, что и у списка. */
 export async function fetchApplicationsCsv(token: string): Promise<Blob> {
   const res = await fetch('/api/applications.csv', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.blob()
+}
+
+export interface ClickSummary {
+  days: number
+  total: number
+  sources: { source: string; clicks: number }[]
+}
+
+/** Переходы к регистрации (клики по ссылке на Google-форму) по источникам. */
+export async function fetchClickSummary(token: string, days = 30): Promise<ClickSummary> {
+  const res = await fetch(`/api/registration-clicks/summary?days=${days}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return (await res.json()) as ClickSummary
+}
+
+/** CSV-выгрузка журнала переходов к регистрации. */
+export async function fetchClicksCsv(token: string): Promise<Blob> {
+  const res = await fetch('/api/registration-clicks.csv', {
     headers: { Authorization: `Bearer ${token}` },
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)

@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { BrandMark } from '../components/common/BrandMark'
 import { GlassCard } from '../components/common/GlassCard'
-import { fetchApplications, fetchApplicationsCsv, type ApplicationRow } from '../lib/db'
+import {
+  fetchApplications,
+  fetchApplicationsCsv,
+  fetchClickSummary,
+  fetchClicksCsv,
+  type ApplicationRow,
+  type ClickSummary,
+} from '../lib/db'
 import { tryLogin, isLoggedIn, logout, getToken } from './auth'
 
 const fieldClass =
@@ -17,12 +24,14 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
   const [lockSeconds, setLockSeconds] = useState(0)
   const [busy, setBusy] = useState(false)
 
-  // Тикающий счётчик блокировки
+  // Тикающий счётчик блокировки: интервал живёт, пока идёт блокировка, и не
+  // пересоздаётся каждую секунду.
+  const locked = lockSeconds > 0
   useEffect(() => {
-    if (lockSeconds <= 0) return
+    if (!locked) return
     const id = window.setInterval(() => setLockSeconds((s) => Math.max(0, s - 1)), 1000)
     return () => window.clearInterval(id)
-  }, [lockSeconds > 0])
+  }, [locked])
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -35,9 +44,11 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
       onSuccess()
       return
     }
-    if (result.lockSeconds > 0) {
+    if (result.reason === 'locked') {
       setLockSeconds(result.lockSeconds)
       setError(null)
+    } else if (result.reason === 'unavailable') {
+      setError('Сервис временно недоступен, попробуйте позже')
     } else {
       setError('Неверный пароль')
     }
@@ -141,6 +152,60 @@ function SourceCell({ row }: { row: ApplicationRow }) {
   )
 }
 
+/** Отдаёт blob браузеру как скачиваемый файл. */
+function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+/** Клики по ссылкам на внешнюю форму регистрации по источникам (utm_source /
+ * реферер) — заявки идут через Google-форму, и метки иначе теряются. */
+function ClicksCard({ summary, onExport, exporting }: { summary: ClickSummary; onExport: () => void; exporting: boolean }) {
+  return (
+    <section
+      aria-labelledby="clicks-title"
+      className="mt-4 rounded-lg border px-5 py-4"
+      style={{ borderColor: 'var(--color-hairline)', background: 'var(--color-surface-1)' }}
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h2 id="clicks-title" className="text-[13.5px] font-medium text-text">
+          Переходы к регистрации <span className="text-text-muted">· {summary.days} дней · {summary.total}</span>
+        </h2>
+        <button
+          type="button"
+          onClick={onExport}
+          disabled={exporting}
+          className="press rounded-full border px-3 py-1.5 text-[12px] text-text-muted hover:text-text disabled:opacity-50"
+          style={{ borderColor: 'var(--color-hairline)' }}
+        >
+          {exporting ? 'Выгрузка…' : 'CSV переходов'}
+        </button>
+      </div>
+      {summary.sources.length === 0 ? (
+        <p className="mt-2 text-[12.5px] text-text-faint">Переходов пока нет</p>
+      ) : (
+        <ul className="mt-3 flex flex-wrap gap-2">
+          {summary.sources.map((s) => (
+            <li
+              key={s.source}
+              className="rounded-full border px-3 py-1 font-mono text-[12px] text-text-muted"
+              style={{ borderColor: 'var(--color-hairline-strong)' }}
+            >
+              {s.source} <span className="text-text">{s.clicks}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
 function Dashboard() {
   const [rows, setRows] = useState<ApplicationRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -148,6 +213,8 @@ function Dashboard() {
   const [trackFilter, setTrackFilter] = useState<'all' | 'ITECX college' | 'ITECX academic'>('all')
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [clicks, setClicks] = useState<ClickSummary | null>(null)
+  const [exportingClicks, setExportingClicks] = useState(false)
 
   // CSV скачивается через fetch с токеном в заголовке (ссылка <a href> токен
   // передать не может), затем отдаётся браузеру как blob-файл.
@@ -157,19 +224,25 @@ function Dashboard() {
     setExporting(true)
     setError(null)
     try {
-      const blob = await fetchApplicationsCsv(token)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `itecx-applications-${new Date().toISOString().slice(0, 10)}.csv`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
+      saveBlob(await fetchApplicationsCsv(token), `itecx-applications-${new Date().toISOString().slice(0, 10)}.csv`)
     } catch (e) {
       setError(e instanceof Error && e.message.includes('401') ? 'Сессия истекла — войдите заново.' : 'Не удалось выгрузить CSV.')
     } finally {
       setExporting(false)
+    }
+  }
+
+  const exportClicksCsv = async () => {
+    const token = getToken()
+    if (!token || exportingClicks) return
+    setExportingClicks(true)
+    setError(null)
+    try {
+      saveBlob(await fetchClicksCsv(token), `itecx-registration-clicks-${new Date().toISOString().slice(0, 10)}.csv`)
+    } catch (e) {
+      setError(e instanceof Error && e.message.includes('401') ? 'Сессия истекла — войдите заново.' : 'Не удалось выгрузить CSV.')
+    } finally {
+      setExportingClicks(false)
     }
   }
 
@@ -179,7 +252,10 @@ function Dashboard() {
     setLoading(true)
     setError(null)
     try {
-      setRows(await fetchApplications(token))
+      // Сводка переходов — второстепенная: её сбой не мешает показать заявки.
+      const [list, summary] = await Promise.all([fetchApplications(token), fetchClickSummary(token).catch(() => null)])
+      setRows(list)
+      setClicks(summary)
     } catch (e) {
       setError(
         e instanceof Error && e.message.includes('401')
@@ -267,6 +343,7 @@ function Dashboard() {
           <StatChip label="ITECX college" value={college} />
           <StatChip label="ITECX academic" value={academic} />
         </div>
+        {clicks && <ClicksCard summary={clicks} onExport={() => void exportClicksCsv()} exporting={exportingClicks} />}
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <input

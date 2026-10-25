@@ -32,6 +32,9 @@
  * Маркетинговая атрибуция: вместе с заявкой принимаются utm-метки, реферер и
  * страница входа — клиент снимает их при первом визите (src/lib/registration.ts)
  * и присылает с формой. Они уходят и в Bitrix24 (поля UTM_*), и в CSV-выгрузку.
+ * Регистрация на сайте ведёт во внешнюю Google-форму, поэтому клики по её
+ * ссылкам с теми же метками пишутся отдельно — POST /api/registration-click →
+ * таблица registration_clicks (сводка и CSV в панели организатора).
  */
 
 import express from 'express'
@@ -155,7 +158,20 @@ function ensureSchema() {
          ip_hash text NOT NULL,
          created_at timestamptz NOT NULL DEFAULT now()
        );
-       CREATE INDEX IF NOT EXISTS application_submissions_created_idx ON application_submissions (created_at DESC);`
+       CREATE INDEX IF NOT EXISTS application_submissions_created_idx ON application_submissions (created_at DESC);
+       CREATE TABLE IF NOT EXISTS registration_clicks (
+         id bigserial PRIMARY KEY,
+         created_at timestamptz NOT NULL DEFAULT now(),
+         lang text,
+         ${Object.keys(ATTRIBUTION_COLUMNS).map((col) => `${col} text,`).join('\n         ')}
+         link_location text
+       );
+       CREATE INDEX IF NOT EXISTS registration_clicks_created_idx ON registration_clicks (created_at DESC);
+       CREATE TABLE IF NOT EXISTS registration_click_hits (
+         ip_hash text NOT NULL,
+         created_at timestamptz NOT NULL DEFAULT now()
+       );
+       CREATE INDEX IF NOT EXISTS registration_click_hits_created_idx ON registration_click_hits (created_at DESC);`
     )
     .catch((e) => {
       schemaReady = null
@@ -334,8 +350,12 @@ function makeLimiter({ windowMs, max }) {
   }
 }
 
-const submitLimiterIp = makeLimiter({ windowMs: 60 * 60 * 1000, max: 10 }) // 10 заявок/час с IP
-const submitLimiterEmail = makeLimiter({ windowMs: 24 * 60 * 60 * 1000, max: 5 }) // 5/сутки на email
+// Лимиты приёма заявок: общие для in-memory барьера и проверки в БД.
+const SUBMIT_MAX_PER_IP_HOUR = 10
+const SUBMIT_MAX_PER_EMAIL_DAY = 5
+
+const submitLimiterIp = makeLimiter({ windowMs: 60 * 60 * 1000, max: SUBMIT_MAX_PER_IP_HOUR })
+const submitLimiterEmail = makeLimiter({ windowMs: 24 * 60 * 60 * 1000, max: SUBMIT_MAX_PER_EMAIL_DAY })
 
 // Блокировка перебора пароля. Счётчик в БД, а не в памяти: на Vercel каждый
 // холодный старт функции обнулял бы in-memory счётчик, и перебор шёл бы
@@ -385,8 +405,6 @@ async function noteLoginFailure(ipHash) {
 // на Vercel живёт ровно до холодного старта и не разделяется между инстансами,
 // так что один адрес мог слать заявки без ограничений, просто попадая на разные
 // инстансы. Здесь, как и у входа, хранится не адрес, а его HMAC.
-const SUBMIT_MAX_PER_IP_HOUR = 10
-
 async function submitBlockedInDb(ipHash, email) {
   const { rows } = await pool.query(
     `SELECT
@@ -396,7 +414,7 @@ async function submitBlockedInDb(ipHash, email) {
          WHERE email = $2 AND created_at > now() - interval '1 day') AS by_email`,
     [ipHash, email]
   )
-  return rows[0].by_ip >= SUBMIT_MAX_PER_IP_HOUR || rows[0].by_email >= 5
+  return rows[0].by_ip >= SUBMIT_MAX_PER_IP_HOUR || rows[0].by_email >= SUBMIT_MAX_PER_EMAIL_DAY
 }
 
 async function noteSubmission(ipHash) {
@@ -415,6 +433,8 @@ async function noteSubmission(ipHash) {
 function pickAttribution(b) {
   const clean = (v, max) =>
     (typeof v === 'string' ? v : '')
+      // Управляющие символы вырезаются намеренно: метки уходят в CSV и в CRM.
+      // eslint-disable-next-line no-control-regex
       .replace(/[\u0000-\u001f\u007f]/g, '')
       .trim()
       .slice(0, max) || null
@@ -441,6 +461,29 @@ function pickAttribution(b) {
     referrer,
     landing_path,
   }
+}
+
+// ---- переходы к регистрации ------------------------------------------------
+//
+// Регистрация идёт во внешней Google-форме, поэтому utm-метки до нашей БД с
+// заявкой не доезжают. Взамен клиент (lib/registration.ts) шлёт beacon при
+// клике по ссылке регистрации: язык, место кнопки и те же метки атрибуции.
+// Персональных данных здесь нет; IP — только HMAC в отдельном журнале лимита,
+// который чистится через сутки.
+
+const CLICK_MAX_PER_IP_HOUR = 30
+const clickLimiterIp = makeLimiter({ windowMs: 60 * 60 * 1000, max: CLICK_MAX_PER_IP_HOUR })
+const CLICK_LANGS = new Set(['ru', 'kk', 'en'])
+/** Колонки журнала переходов — одна точка для INSERT и CSV. */
+const CLICK_COLUMNS = ['id', 'created_at', 'lang', 'link_location', ...Object.keys(ATTRIBUTION_COLUMNS)]
+
+async function clickBlockedInDb(ipHash) {
+  const { rows } = await pool.query(
+    `SELECT count(*)::int AS n FROM registration_click_hits
+      WHERE ip_hash = $1 AND created_at > now() - interval '1 hour'`,
+    [ipHash]
+  )
+  return rows[0].n >= CLICK_MAX_PER_IP_HOUR
 }
 
 /**
@@ -642,22 +685,8 @@ function bearerOk(req) {
   return verifyToken(token)
 }
 
-app.get('/api/applications', async (req, res) => {
-  if (!bearerOk(req)) return res.status(401).json({ error: 'unauthorized' })
-  await ensureSchema()
-  try {
-    const { rows } = await pool.query('SELECT * FROM applications ORDER BY created_at DESC LIMIT 1000')
-    res.json({ rows })
-  } catch (e) {
-    console.error('select failed:', e.message)
-    res.status(500).json({ error: 'db' })
-  }
-})
-
-// Выгрузка в CSV для панели организатора — те же права, что и у списка.
-// UTF-8 с BOM, чтобы Excel на Windows не показал кириллицу кракозябрами;
-// разделитель — запятая, даты в ISO.
-const CSV_COLUMNS = [
+// Колонки заявки, которые отдаются панели и в CSV (= ApplicationRow в lib/db.ts).
+const APPLICATION_COLUMNS = [
   'id',
   'created_at',
   'first_name',
@@ -670,22 +699,118 @@ const CSV_COLUMNS = [
   ...Object.keys(ATTRIBUTION_COLUMNS),
   'bitrix_deal_id',
 ]
+/** Потолок строк для списка в панели и CSV-выгрузок. */
+const ADMIN_ROWS_LIMIT = 10000
+
+app.get('/api/applications', async (req, res) => {
+  if (!bearerOk(req)) return res.status(401).json({ error: 'unauthorized' })
+  await ensureSchema()
+  try {
+    const { rows } = await pool.query(
+      `SELECT ${APPLICATION_COLUMNS.join(', ')} FROM applications ORDER BY created_at DESC LIMIT $1`,
+      [ADMIN_ROWS_LIMIT]
+    )
+    res.json({ rows })
+  } catch (e) {
+    console.error('select failed:', e.message)
+    res.status(500).json({ error: 'db' })
+  }
+})
+
+// Выгрузка в CSV для панели организатора — те же права, что и у списка.
+// UTF-8 с BOM, чтобы Excel на Windows не показал кириллицу кракозябрами;
+// разделитель — запятая, даты в ISO.
+function sendCsv(res, columns, rows, name) {
+  const lines = [columns.join(',')]
+  for (const row of rows) lines.push(columns.map((c) => csvCell(row[c])).join(','))
+  const stamp = new Date().toISOString().slice(0, 10)
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+  res.setHeader('Content-Disposition', `attachment; filename="${name}-${stamp}.csv"`)
+  res.send(`\ufeff${lines.join('\r\n')}\r\n`)
+}
 
 app.get('/api/applications.csv', async (req, res) => {
   if (!bearerOk(req)) return res.status(401).json({ error: 'unauthorized' })
   await ensureSchema()
   try {
     const { rows } = await pool.query(
-      `SELECT ${CSV_COLUMNS.join(', ')} FROM applications ORDER BY created_at DESC LIMIT 10000`
+      `SELECT ${APPLICATION_COLUMNS.join(', ')} FROM applications ORDER BY created_at DESC LIMIT $1`,
+      [ADMIN_ROWS_LIMIT]
     )
-    const lines = [CSV_COLUMNS.join(',')]
-    for (const row of rows) lines.push(CSV_COLUMNS.map((c) => csvCell(row[c])).join(','))
-    const stamp = new Date().toISOString().slice(0, 10)
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-    res.setHeader('Content-Disposition', `attachment; filename="itecx-applications-${stamp}.csv"`)
-    res.send(`﻿${lines.join('\r\n')}\r\n`)
+    sendCsv(res, APPLICATION_COLUMNS, rows, 'itecx-applications')
   } catch (e) {
     console.error('csv export failed:', e.message)
+    res.status(500).json({ error: 'db' })
+  }
+})
+
+// Beacon «клик по ссылке регистрации» (navigator.sendBeacon с нашей страницы).
+// Те же барьеры, что у заявки: проверка Origin, in-memory и БД-лимит по HMAC IP,
+// очистка меток через pickAttribution. Ответ без тела — beacon его не читает.
+app.post('/api/registration-click', async (req, res) => {
+  if (!sameOrigin(req)) return res.status(403).json({ error: 'origin' })
+  const ip = clientIp(req)
+  if (!clickLimiterIp(ip)) return res.status(429).json({ error: 'rate_limit' })
+  const b = req.body && typeof req.body === 'object' ? req.body : {}
+  const lang = CLICK_LANGS.has(b.lang) ? b.lang : null
+  const linkLocation = typeof b.linkLocation === 'string' && /^[a-z0-9-]{1,40}$/.test(b.linkLocation) ? b.linkLocation : null
+  const attribution = pickAttribution(b)
+  const ipHash = hashIp(ip)
+  await ensureSchema()
+  try {
+    if (await clickBlockedInDb(ipHash)) return res.status(429).json({ error: 'rate_limit' })
+    const cols = Object.keys(ATTRIBUTION_COLUMNS)
+    await pool.query(
+      `INSERT INTO registration_clicks (lang, link_location, ${cols.join(', ')})
+       VALUES ($1, $2, ${cols.map((_, i) => `$${i + 3}`).join(', ')})`,
+      [lang, linkLocation, ...cols.map((c) => attribution[c])]
+    )
+    await pool.query('INSERT INTO registration_click_hits (ip_hash) VALUES ($1)', [ipHash])
+    await pool.query(`DELETE FROM registration_click_hits WHERE created_at < now() - interval '1 day'`)
+  } catch (e) {
+    console.error('registration click failed:', e.message)
+    return res.status(503).json({ error: 'db' })
+  }
+  res.status(204).end()
+})
+
+// Сводка для панели: переходы к регистрации по источникам за последние N дней.
+// Источник — utm_source, иначе хост реферера, иначе «прямой».
+app.get('/api/registration-clicks/summary', async (req, res) => {
+  if (!bearerOk(req)) return res.status(401).json({ error: 'unauthorized' })
+  const days = Math.min(Math.max(Number.parseInt(String(req.query.days ?? '30'), 10) || 30, 1), 365)
+  await ensureSchema()
+  try {
+    const { rows } = await pool.query(
+      `SELECT COALESCE(utm_source, substring(referrer from '^https?://(?:www\\.)?([^/:]+)'), '(прямой)') AS source,
+              count(*)::int AS clicks
+         FROM registration_clicks
+        WHERE created_at > now() - make_interval(days => $1)
+        GROUP BY 1 ORDER BY clicks DESC, source LIMIT 10`,
+      [days]
+    )
+    const { rows: totalRows } = await pool.query(
+      `SELECT count(*)::int AS total FROM registration_clicks WHERE created_at > now() - make_interval(days => $1)`,
+      [days]
+    )
+    res.json({ days, total: totalRows[0].total, sources: rows })
+  } catch (e) {
+    console.error('click summary failed:', e.message)
+    res.status(500).json({ error: 'db' })
+  }
+})
+
+app.get('/api/registration-clicks.csv', async (req, res) => {
+  if (!bearerOk(req)) return res.status(401).json({ error: 'unauthorized' })
+  await ensureSchema()
+  try {
+    const { rows } = await pool.query(
+      `SELECT ${CLICK_COLUMNS.join(', ')} FROM registration_clicks ORDER BY created_at DESC LIMIT $1`,
+      [ADMIN_ROWS_LIMIT]
+    )
+    sendCsv(res, CLICK_COLUMNS, rows, 'itecx-registration-clicks')
+  } catch (e) {
+    console.error('click csv export failed:', e.message)
     res.status(500).json({ error: 'db' })
   }
 })
