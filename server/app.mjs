@@ -409,10 +409,12 @@ async function noteSubmission(ipHash) {
  * аналитика, а не данные участника — лишнее лучше отрезать, чем отклонить
  * заявку), убирает управляющие символы, реферер сводит к схеме+хосту+пути
  * (без query — там бывают чужие токены), путь входа принимает только с «/».
+ * Не-строки (объект/массив/число в JSON) отбрасываются — иначе в БД и в
+ * UTM_SOURCE сделки уезжал бы «[object Object]».
  */
 function pickAttribution(b) {
   const clean = (v, max) =>
-    String(v ?? '')
+    (typeof v === 'string' ? v : '')
       .replace(/[\u0000-\u001f\u007f]/g, '')
       .trim()
       .slice(0, max) || null
@@ -589,7 +591,10 @@ app.post('/api/applications', async (req, res) => {
     console.error('insert failed:', e.message)
     return res.status(500).json({ error: 'db' })
   }
-  noteSubmission(ipHash).catch((e) => console.error('submission log failed:', e.message))
+  // Не ждём запись в журнал IP-лимита перед ответом, но на Vercel она должна
+  // доехать — иначе функция замёрзнет после ответа, строка не запишется, и
+  // почасовой лимит по IP не сработает (см. waitUntil ниже).
+  const submissionTask = noteSubmission(ipHash).catch((e) => console.error('submission log failed:', e.message))
 
   // Заявка уже в БД — отвечаем пользователю СРАЗУ, не дожидаясь Bitrix.
   // Иначе медленный CRM (2 HTTP-вызова × до 6с) держит форму «на отправке»
@@ -605,8 +610,9 @@ app.post('/api/applications', async (req, res) => {
     )
     .catch((e) => console.error('[bitrix] push failed (заявка сохранена в БД, в CRM не попала):', e.message))
 
-  // Vercel: не дать платформе заморозить функцию до завершения фоновой задачи.
-  vercelWaitUntil?.(bitrixTask)
+  // Vercel: не дать платформе заморозить функцию до завершения фоновых задач
+  // (обе уже с .catch, поэтому Promise.all не отклонится).
+  vercelWaitUntil?.(Promise.all([bitrixTask, submissionTask]))
 })
 
 app.post('/api/admin/login', async (req, res) => {
