@@ -218,6 +218,10 @@ export const en: Content = {
         a: 'For school students: the school stage, the national congress, and the international final in Italy. The academic format starts directly at the national stage.',
       },
       {
+        q: 'How can a school or a teacher take part?',
+        a: 'Each school holds its own school congress, and a jury of teachers selects the best projects for the national stage. At every stage, teachers and mentors support participants with research, data collection, and scientific writing.',
+      },
+      {
         q: 'Which language should I present in?',
         a: 'Your native language at the national stage, English at the international final.',
       },
@@ -230,8 +234,20 @@ export const en: Content = {
         a: 'Scientific depth, innovation, contribution to education, research methods, presentation skills, and the quality of the research paper.',
       },
       {
+        q: 'Is the participant’s research paper published?',
+        a: 'The best works of the international final are considered for publication in the indexed Fibonacci scientific journal. Participants prepare the paper in advance — introduction, methodology, results, and conclusions — and the jury scores it as a separate criterion.',
+      },
+      {
+        q: 'How do I get to the final in Italy?',
+        a: 'Projects that pass the national selection are invited to Italy. At the final, participants present a talk and a poster in English, and an extended jury evaluates the work against academic standards.',
+      },
+      {
         q: 'What do participants gain?',
         a: 'The best works of the final are considered for publication in the indexed Fibonacci scientific journal. Participants also gain experience in academic discussion and meet researchers from other countries.',
+      },
+      {
+        q: 'How much does participation cost?',
+        a: 'Participation is a paid educational service: the organizers announce the cost in official information materials. Payment is accepted in tenge by bank transfer, including online payment and instalments; cancellation and refund terms are set out in the public offer.',
       },
       {
         q: 'How do I apply?',
@@ -260,7 +276,7 @@ export const en: Content = {
     kicker: 'Legal information',
     title: 'Privacy Policy',
     updatedLabel: 'Updated',
-    updatedDate: 'October 12, 2026',
+    updatedDate: 'October 25, 2026',
     intro:
       'This document explains in plain language what data a visitor to itecx.kz leaves behind, why the ITECX organizers need it, and what you can do about it.',
     tocTitle: 'Contents',
@@ -295,6 +311,8 @@ export const en: Content = {
         title: 'Technical data',
         paragraphs: [
           'When the form is submitted, the server briefly sees the sender’s IP address — it is used solely to cut off spam and automated submissions. The IP address is not stored in the applications database.',
+          'Traffic-source markers are stored together with the application: the utm parameters of the link you arrived through, the address of the referring site, and the page on which you opened itecx.kz. They tell the organizers which ads and publications bring participants; the markers are tied to a specific person only through the application itself.',
+          'When you click a registration button that leads to the external form (Google Forms), the site records only the fact of the click: the time, the page language, where the button was, and the same traffic-source markers. Your name, contacts and IP address are not part of this record; to prevent abuse, the server keeps only an irreversible hash of the IP address and deletes it after one day.',
           'We do not determine your location, do not build advertising profiles, and do not track you across other websites.',
         ],
         items: [],
@@ -423,7 +441,7 @@ export const en: Content = {
     seo: {
       title: 'Privacy Policy — ITECX',
       description:
-        'How the ITECX congress handles personal data submitted through the application form on itecx.kz: what we collect, why, who we share it with, how long we keep it, and how to have it deleted.',
+        'How ITECX handles personal data from applications on itecx.kz: what we collect, why, who we share it with, how long we keep it and how to delete it.',
     },
   },
 
@@ -567,10 +585,20 @@ export const en: Content = {
 
   seo: {
     ogLocale: 'en_US',
-    title: 'ITECX 2026 — International Scientific Congress for Students in Kazakhstan',
+    title: 'ITECX 2026 — International Science Congress for School and University Students in Kazakhstan',
     description:
-      'ITECX — an international congress in engineering, technology and mathematics for school students in grades 3–11, university students and researchers. School and national stages in Kazakhstan, a final in Italy and publication in the Fibonacci scientific journal.',
+      'International science congress for school students (grades 3–11), university students and researchers: stages in Kazakhstan, final in Italy, Fibonacci journal.',
     keywords:
-      'ITECX, ITECX 2026, scientific congress, international scientific congress, science conference for school students, student research conference, student research project, research paper, publish a research paper, Fibonacci journal, Fibonacci congress, engineering, technology, mathematics, STEM, educational technology, Kazakhstan, final in Italy, international science project competition, ITECX college, ITECX academic',
+      'ITECX, ITECX 2026, international science congress for school students, international science congress for school students 2026, international scientific congress, scientific congress, student research conference Kazakhstan, science project competition for high school students, science project competition for school students 2026-2027, international science conference for students, research conference for university students, conference for college students, conference for lecturers and professors, student research project, research paper for school students, how to write a research paper as a student, science project topics for students, publish a research paper as a student, publish a research paper, student research journal, international conference with publication, Fibonacci scientific journal, Fibonacci congress, First Fibonacci International Congress on Engineering Technology and Mathematics, science project defense, poster presentation, oral presentation in English, science competition for school students, engineering project competition, STEM project, STEM congress Italy final, educational technology, engineering, technology, mathematics, science competition for grades 3–11, research supervisor for school students, conference for teachers, school participation in an international congress, school stage of the congress, national congress Kazakhstan, congress in Italy, science final in Italy, final in Italy, ITECX college, ITECX academic, Kazakhstan, science conference Astana, register for a science conference, how to apply to a science congress, research project evaluation criteria, participant guide for a science congress',
+    knowsAbout: [
+      'Educational technology',
+      'Science',
+      'Mathematics',
+      'Engineering',
+      'STEM education',
+      'School student research projects',
+      'University student research',
+      'Research papers and publications',
+    ],
   },
 }

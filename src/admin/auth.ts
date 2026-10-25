@@ -9,17 +9,20 @@ import { adminLogin } from '../lib/db'
 
 const SESSION_KEY = 'itecx-admin-token'
 
-export async function tryLogin(password: string): Promise<{ ok: boolean; lockSeconds: number }> {
-  try {
-    const result = await adminLogin(password)
-    if (result.token) {
+export type LoginOutcome = { ok: true } | { ok: false; reason: 'invalid' | 'unavailable' } | { ok: false; reason: 'locked'; lockSeconds: number }
+
+export async function tryLogin(password: string): Promise<LoginOutcome> {
+  const result = await adminLogin(password)
+  if (result.kind === 'ok') {
+    try {
       sessionStorage.setItem(SESSION_KEY, result.token)
-      return { ok: true, lockSeconds: 0 }
+    } catch {
+      return { ok: false, reason: 'unavailable' }
     }
-    return { ok: false, lockSeconds: result.retryAfter ?? 0 }
-  } catch {
-    return { ok: false, lockSeconds: 0 }
+    return { ok: true }
   }
+  if (result.kind === 'locked') return { ok: false, reason: 'locked', lockSeconds: result.retryAfter }
+  return { ok: false, reason: result.kind }
 }
 
 export function getToken(): string | null {

@@ -11,6 +11,8 @@ Disallow: /index.kk.html
 Disallow: /index.en.html
 Disallow: /privacy.kk.html
 Disallow: /privacy.en.html
+Disallow: /guide.kk.html
+Disallow: /guide.en.html
 Disallow: /oferta.kk.html
 Disallow: /oferta.en.html
 Disallow: /admin.html

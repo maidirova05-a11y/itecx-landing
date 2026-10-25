@@ -38,11 +38,23 @@ CREATE TABLE IF NOT EXISTS applications (
   phone text,
   track text NOT NULL,
   organization text,
-  message text
+  message text,
+  bitrix_deal_id text,
+  utm_source text,
+  utm_medium text,
+  utm_campaign text,
+  utm_content text,
+  utm_term text,
+  referrer text,
+  landing_path text
 );
 CREATE INDEX IF NOT EXISTS applications_created_at_idx ON applications (created_at DESC);
 CREATE INDEX IF NOT EXISTS applications_email_idx ON applications (email);
 ```
+
+Шаг необязательный: приложение при первом запросе само создаёт таблицу и
+добавляет недостающие колонки (`ensureSchema` в `server/app.mjs`), поэтому
+старую базу мигрировать руками не нужно.
 
 ## 4. Переменные окружения
 

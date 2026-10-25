@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { BrandMark } from '../components/common/BrandMark'
 import { GlassCard } from '../components/common/GlassCard'
-import { fetchApplications, type ApplicationRow } from '../lib/db'
+import {
+  fetchApplications,
+  fetchApplicationsCsv,
+  fetchClickSummary,
+  fetchClicksCsv,
+  type ApplicationRow,
+  type ClickSummary,
+} from '../lib/db'
 import { tryLogin, isLoggedIn, logout, getToken } from './auth'
 
 const fieldClass =
@@ -17,12 +24,14 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
   const [lockSeconds, setLockSeconds] = useState(0)
   const [busy, setBusy] = useState(false)
 
-  // Тикающий счётчик блокировки
+  // Тикающий счётчик блокировки: интервал живёт, пока идёт блокировка, и не
+  // пересоздаётся каждую секунду.
+  const locked = lockSeconds > 0
   useEffect(() => {
-    if (lockSeconds <= 0) return
+    if (!locked) return
     const id = window.setInterval(() => setLockSeconds((s) => Math.max(0, s - 1)), 1000)
     return () => window.clearInterval(id)
-  }, [lockSeconds > 0])
+  }, [locked])
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -35,9 +44,11 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
       onSuccess()
       return
     }
-    if (result.lockSeconds > 0) {
+    if (result.reason === 'locked') {
       setLockSeconds(result.lockSeconds)
       setError(null)
+    } else if (result.reason === 'unavailable') {
+      setError('Сервис временно недоступен, попробуйте позже')
     } else {
       setError('Неверный пароль')
     }
@@ -109,12 +120,131 @@ function StatChip({ label, value }: { label: string; value: number }) {
   )
 }
 
+/** Хост реферера без схемы — для компактной колонки «Источник». */
+function refererHost(url: string | null): string | null {
+  if (!url) return null
+  try {
+    return new URL(url).host.replace(/^www\./, '')
+  } catch {
+    return url
+  }
+}
+
+/** Компактная подпись источника: «google / cpc», иначе хост реферера, иначе «прямой». */
+function SourceCell({ row }: { row: ApplicationRow }) {
+  const utm = [row.utm_source, row.utm_medium].filter(Boolean).join(' / ')
+  const host = refererHost(row.referrer)
+  const label = utm || host || '—'
+  const details = [
+    row.utm_campaign && `Кампания: ${row.utm_campaign}`,
+    row.utm_content && `Объявление: ${row.utm_content}`,
+    row.utm_term && `Ключ: ${row.utm_term}`,
+    row.referrer && `Реферер: ${row.referrer}`,
+    row.landing_path && `Страница входа: ${row.landing_path}`,
+  ]
+    .filter(Boolean)
+    .join('\n')
+  return (
+    <td className="max-w-[180px] truncate px-4 py-3 font-mono text-[12px] text-text-muted" title={details || 'Прямой заход'}>
+      {label}
+      {row.utm_campaign && <span className="text-text-faint"> · {row.utm_campaign}</span>}
+    </td>
+  )
+}
+
+/** Отдаёт blob браузеру как скачиваемый файл. */
+function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+/** Клики по ссылкам на внешнюю форму регистрации по источникам (utm_source /
+ * реферер) — заявки идут через Google-форму, и метки иначе теряются. */
+function ClicksCard({ summary, onExport, exporting }: { summary: ClickSummary; onExport: () => void; exporting: boolean }) {
+  return (
+    <section
+      aria-labelledby="clicks-title"
+      className="mt-4 rounded-lg border px-5 py-4"
+      style={{ borderColor: 'var(--color-hairline)', background: 'var(--color-surface-1)' }}
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h2 id="clicks-title" className="text-[13.5px] font-medium text-text">
+          Переходы к регистрации <span className="text-text-muted">· {summary.days} дней · {summary.total}</span>
+        </h2>
+        <button
+          type="button"
+          onClick={onExport}
+          disabled={exporting}
+          className="press rounded-full border px-3 py-1.5 text-[12px] text-text-muted hover:text-text disabled:opacity-50"
+          style={{ borderColor: 'var(--color-hairline)' }}
+        >
+          {exporting ? 'Выгрузка…' : 'CSV переходов'}
+        </button>
+      </div>
+      {summary.sources.length === 0 ? (
+        <p className="mt-2 text-[12.5px] text-text-faint">Переходов пока нет</p>
+      ) : (
+        <ul className="mt-3 flex flex-wrap gap-2">
+          {summary.sources.map((s) => (
+            <li
+              key={s.source}
+              className="rounded-full border px-3 py-1 font-mono text-[12px] text-text-muted"
+              style={{ borderColor: 'var(--color-hairline-strong)' }}
+            >
+              {s.source} <span className="text-text">{s.clicks}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
 function Dashboard() {
   const [rows, setRows] = useState<ApplicationRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [trackFilter, setTrackFilter] = useState<'all' | 'ITECX college' | 'ITECX academic'>('all')
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [clicks, setClicks] = useState<ClickSummary | null>(null)
+  const [exportingClicks, setExportingClicks] = useState(false)
+
+  // CSV скачивается через fetch с токеном в заголовке (ссылка <a href> токен
+  // передать не может), затем отдаётся браузеру как blob-файл.
+  const exportCsv = async () => {
+    const token = getToken()
+    if (!token || exporting) return
+    setExporting(true)
+    setError(null)
+    try {
+      saveBlob(await fetchApplicationsCsv(token), `itecx-applications-${new Date().toISOString().slice(0, 10)}.csv`)
+    } catch (e) {
+      setError(e instanceof Error && e.message.includes('401') ? 'Сессия истекла — войдите заново.' : 'Не удалось выгрузить CSV.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const exportClicksCsv = async () => {
+    const token = getToken()
+    if (!token || exportingClicks) return
+    setExportingClicks(true)
+    setError(null)
+    try {
+      saveBlob(await fetchClicksCsv(token), `itecx-registration-clicks-${new Date().toISOString().slice(0, 10)}.csv`)
+    } catch (e) {
+      setError(e instanceof Error && e.message.includes('401') ? 'Сессия истекла — войдите заново.' : 'Не удалось выгрузить CSV.')
+    } finally {
+      setExportingClicks(false)
+    }
+  }
 
   const load = async () => {
     const token = getToken()
@@ -122,7 +252,10 @@ function Dashboard() {
     setLoading(true)
     setError(null)
     try {
-      setRows(await fetchApplications(token))
+      // Сводка переходов — второстепенная: её сбой не мешает показать заявки.
+      const [list, summary] = await Promise.all([fetchApplications(token), fetchClickSummary(token).catch(() => null)])
+      setRows(list)
+      setClicks(summary)
     } catch (e) {
       setError(
         e instanceof Error && e.message.includes('401')
@@ -144,7 +277,7 @@ function Dashboard() {
     return rows.filter((r) => {
       if (trackFilter !== 'all' && r.track !== trackFilter) return false
       if (!q) return true
-      return [r.first_name, r.last_name, r.email, r.phone, r.organization, r.message]
+      return [r.first_name, r.last_name, r.email, r.phone, r.organization, r.message, r.utm_source, r.utm_campaign, r.referrer]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q))
     })
@@ -167,7 +300,7 @@ function Dashboard() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <div className="flex items-center gap-3">
             <BrandMark size={36} fontSize={11} />
-            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-muted">Заявки</span>
+            <h1 className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-muted">Заявки</h1>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -178,6 +311,16 @@ function Dashboard() {
               style={{ borderColor: 'var(--color-hairline-strong)' }}
             >
               {loading ? 'Обновление…' : 'Обновить'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void exportCsv()}
+              disabled={exporting || !rows?.length}
+              className="press rounded-full border px-4 py-2 text-[13px] text-text disabled:opacity-50"
+              style={{ borderColor: 'var(--color-hairline-strong)' }}
+              title="Выгрузить все заявки в CSV (включая источник)"
+            >
+              {exporting ? 'Выгрузка…' : 'Экспорт CSV'}
             </button>
             <button
               type="button"
@@ -200,10 +343,12 @@ function Dashboard() {
           <StatChip label="ITECX college" value={college} />
           <StatChip label="ITECX academic" value={academic} />
         </div>
+        {clicks && <ClicksCard summary={clicks} onExport={() => void exportClicksCsv()} exporting={exportingClicks} />}
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <input
             type="search"
+            aria-label="Поиск по заявкам"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Поиск: имя, email, организация…"
@@ -213,6 +358,7 @@ function Dashboard() {
             onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--color-hairline-strong)')}
           />
           <select
+            aria-label="Фильтр по формату"
             value={trackFilter}
             onChange={(e) => setTrackFilter(e.target.value as typeof trackFilter)}
             className={`${fieldClass} sm:max-w-[220px]`}
@@ -234,7 +380,7 @@ function Dashboard() {
           className="mt-6 overflow-x-auto rounded-lg border"
           style={{ borderColor: 'var(--color-hairline)', background: 'var(--color-surface-1)' }}
         >
-          <table className="w-full min-w-[820px] text-left text-[13.5px]">
+          <table className="w-full min-w-[960px] text-left text-[13.5px]">
             <thead>
               <tr
                 className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-faint"
@@ -247,13 +393,14 @@ function Dashboard() {
                 <th className="px-4 py-3 font-medium">Формат</th>
                 <th className="px-4 py-3 font-medium">Организация</th>
                 <th className="px-4 py-3 font-medium">Комментарий</th>
+                <th className="px-4 py-3 font-medium">Источник</th>
                 <th className="px-4 py-3 font-medium">CRM</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-text-faint">
+                  <td colSpan={9} className="px-4 py-8 text-center text-text-faint">
                     {loading ? 'Загрузка…' : 'Заявок пока нет'}
                   </td>
                 </tr>
@@ -289,6 +436,7 @@ function Dashboard() {
                     <td className="max-w-[240px] truncate px-4 py-3 text-text-muted" title={r.message ?? undefined}>
                       {r.message ?? '—'}
                     </td>
+                    <SourceCell row={r} />
                     <td className="px-4 py-3 text-center" title={r.bitrix_deal_id ? `Сделка #${r.bitrix_deal_id}` : 'Не синхронизировано'}>
                       {r.bitrix_deal_id ? (
                         <span style={{ color: 'var(--color-accent-soft)' }}>✓</span>

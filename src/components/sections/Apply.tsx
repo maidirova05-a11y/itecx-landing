@@ -29,6 +29,7 @@ export function Apply() {
           <div className="mt-10 flex flex-col items-center gap-5 text-center">
             <a
               href={REGISTRATION_URL}
+              data-reg-location="apply"
               target="_blank"
               rel="noopener noreferrer"
               className="press w-full rounded-full px-9 py-4 text-[15px] font-medium text-white sm:w-auto"

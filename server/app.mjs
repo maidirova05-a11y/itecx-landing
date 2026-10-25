@@ -20,8 +20,21 @@
  * сделкой в CRM (см. pushToBitrix) — сбой Bitrix не портит ответ пользователю,
  * БД остаётся источником правды. Настраивается через BITRIX_WEBHOOK_URL.
  *
- * Примечание для serverless: блокировка входа и суточный лимит заявок по email
- * хранятся в БД и переживают холодные старты; почасовой лимит по IP — in-memory.
+ * Примечание для serverless: блокировка входа, суточный лимит заявок по email
+ * и почасовой лимит по IP (HMAC адреса, как у входа) хранятся в БД и
+ * переживают холодные старты; in-memory лимитер остаётся первым, дешёвым
+ * барьером внутри одного инстанса.
+ *
+ * Схема таблицы заявок поддерживается самим приложением (ensureSchema):
+ * CREATE TABLE / ADD COLUMN IF NOT EXISTS, поэтому новая колонка добавляется в
+ * коде и появляется в любой базе (Neon, VPS, Docker) при первом запросе.
+ *
+ * Маркетинговая атрибуция: вместе с заявкой принимаются utm-метки, реферер и
+ * страница входа — клиент снимает их при первом визите (src/lib/registration.ts)
+ * и присылает с формой. Они уходят и в Bitrix24 (поля UTM_*), и в CSV-выгрузку.
+ * Регистрация на сайте ведёт во внешнюю Google-форму, поэтому клики по её
+ * ссылкам с теми же метками пишутся отдельно — POST /api/registration-click →
+ * таблица registration_clicks (сводка и CSV в панели организатора).
  */
 
 import express from 'express'
@@ -97,6 +110,76 @@ pool.on('error', (err) => {
   console.error('[db] idle client error (обработано, процесс жив):', err.message)
 })
 
+// ---- схема --------------------------------------------------------------------
+//
+// Таблица заявок исторически создавалась руками (deploy/setup-db.sql,
+// DEPLOY-VERCEL.md). Теперь приложение само доводит её до актуального вида:
+// CREATE TABLE для пустой базы, ADD COLUMN IF NOT EXISTS для уже существующей —
+// так колонки атрибуции появляются и в Neon, и на VPS без ручной миграции.
+// Все операторы идемпотентны, выполняются один раз на инстанс (memo-промис);
+// при ошибке не роняем запрос — таблица, скорее всего, уже есть, а падение
+// INSERT-а и так будет замечено и залогировано.
+
+/** Поля атрибуции: имя колонки → максимальная длина. Единый источник для
+ * схемы, приёма заявки и CSV. */
+const ATTRIBUTION_COLUMNS = {
+  utm_source: 120,
+  utm_medium: 120,
+  utm_campaign: 120,
+  utm_content: 120,
+  utm_term: 120,
+  referrer: 500,
+  landing_path: 255,
+}
+
+let schemaReady = null
+function ensureSchema() {
+  schemaReady ??= pool
+    .query(
+      `CREATE TABLE IF NOT EXISTS applications (
+         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+         created_at timestamptz NOT NULL DEFAULT now(),
+         first_name text NOT NULL,
+         last_name text NOT NULL,
+         email text NOT NULL,
+         phone text,
+         track text NOT NULL,
+         organization text,
+         message text,
+         bitrix_deal_id text
+       );
+       ALTER TABLE applications ADD COLUMN IF NOT EXISTS bitrix_deal_id text;
+       ${Object.keys(ATTRIBUTION_COLUMNS)
+         .map((col) => `ALTER TABLE applications ADD COLUMN IF NOT EXISTS ${col} text;`)
+         .join('\n       ')}
+       CREATE INDEX IF NOT EXISTS applications_created_at_idx ON applications (created_at DESC);
+       CREATE INDEX IF NOT EXISTS applications_email_idx ON applications (email);
+       CREATE TABLE IF NOT EXISTS application_submissions (
+         ip_hash text NOT NULL,
+         created_at timestamptz NOT NULL DEFAULT now()
+       );
+       CREATE INDEX IF NOT EXISTS application_submissions_created_idx ON application_submissions (created_at DESC);
+       CREATE TABLE IF NOT EXISTS registration_clicks (
+         id bigserial PRIMARY KEY,
+         created_at timestamptz NOT NULL DEFAULT now(),
+         lang text,
+         ${Object.keys(ATTRIBUTION_COLUMNS).map((col) => `${col} text,`).join('\n         ')}
+         link_location text
+       );
+       CREATE INDEX IF NOT EXISTS registration_clicks_created_idx ON registration_clicks (created_at DESC);
+       CREATE TABLE IF NOT EXISTS registration_click_hits (
+         ip_hash text NOT NULL,
+         created_at timestamptz NOT NULL DEFAULT now()
+       );
+       CREATE INDEX IF NOT EXISTS registration_click_hits_created_idx ON registration_click_hits (created_at DESC);`
+    )
+    .catch((e) => {
+      schemaReady = null
+      console.error('[db] ensureSchema failed (работаем с тем, что есть):', e.message)
+    })
+  return schemaReady
+}
+
 // ---- интеграция с Bitrix24 --------------------------------------------------
 //
 // Best-effort: заявка уже сохранена в нашей БД до вызова этой функции, поэтому
@@ -125,8 +208,9 @@ async function bitrixCall(method, payload) {
 /** Создаёт контакт + сделку в воронке CATEGORY_ID (по умолчанию 17 — «ITECX»
  * из ссылки заказчика). Возвращает ID созданной сделки или null, если
  * интеграция не настроена / упала (в последнем случае — кидает наверх). */
-async function pushToBitrix({ firstName, lastName, email, phone, track, organization, message }) {
+async function pushToBitrix({ firstName, lastName, email, phone, track, organization, message, attribution = {} }) {
   if (!BITRIX_WEBHOOK_URL) return null
+  const { utm_source, utm_medium, utm_campaign, utm_content, utm_term, referrer, landing_path } = attribution
 
   let contactId
   try {
@@ -150,7 +234,25 @@ async function pushToBitrix({ firstName, lastName, email, phone, track, organiza
     phone && `Телефон: ${phone}`,
     organization && `Организация: ${organization}`,
     message && `Комментарий: ${message}`,
+    (utm_source || utm_medium || utm_campaign) &&
+      `Источник: ${[utm_source, utm_medium, utm_campaign].filter(Boolean).join(' / ')}`,
+    utm_content && `Объявление (utm_content): ${utm_content}`,
+    utm_term && `Ключ (utm_term): ${utm_term}`,
+    referrer && `Реферер: ${referrer}`,
+    landing_path && `Страница входа: ${landing_path}`,
   ].filter(Boolean)
+
+  // UTM_* — штатные поля сделки Bitrix24: по ним CRM сама строит отчёты
+  // по источникам; в COMMENTS те же метки продублированы для глаз менеджера.
+  const utmFields = Object.fromEntries(
+    [
+      ['UTM_SOURCE', utm_source],
+      ['UTM_MEDIUM', utm_medium],
+      ['UTM_CAMPAIGN', utm_campaign],
+      ['UTM_CONTENT', utm_content],
+      ['UTM_TERM', utm_term],
+    ].filter(([, v]) => v)
+  )
 
   return bitrixCall('crm.deal.add', {
     fields: {
@@ -158,6 +260,7 @@ async function pushToBitrix({ firstName, lastName, email, phone, track, organiza
       CATEGORY_ID: Number(BITRIX_CATEGORY_ID),
       SOURCE_ID: 'WEB',
       COMMENTS: commentLines.join('\n'),
+      ...utmFields,
       ...(contactId ? { CONTACT_ID: contactId } : {}),
     },
     params: { REGISTER_SONET_EVENT: 'Y' },
@@ -190,6 +293,10 @@ function passwordMatches(password) {
     const [, saltHex, hashHex] = ADMIN_PASSWORD_HASH.split(':')
     if (!saltHex || !hashHex) return false
     const expected = Buffer.from(hashHex, 'hex')
+    // Buffer.from('не-hex', 'hex') молча даёт пустой буфер, а scrypt с keylen 0
+    // возвращает такой же пустой — timingSafeEqual двух пустых буферов истинен,
+    // и битый хэш в env пускал бы в панель по любому паролю.
+    if (expected.length < 16) return false
     const actual = crypto.scryptSync(password, Buffer.from(saltHex, 'hex'), expected.length, SCRYPT_PARAMS)
     return crypto.timingSafeEqual(actual, expected)
   }
@@ -243,8 +350,12 @@ function makeLimiter({ windowMs, max }) {
   }
 }
 
-const submitLimiterIp = makeLimiter({ windowMs: 60 * 60 * 1000, max: 10 }) // 10 заявок/час с IP
-const submitLimiterEmail = makeLimiter({ windowMs: 24 * 60 * 60 * 1000, max: 5 }) // 5/сутки на email
+// Лимиты приёма заявок: общие для in-memory барьера и проверки в БД.
+const SUBMIT_MAX_PER_IP_HOUR = 10
+const SUBMIT_MAX_PER_EMAIL_DAY = 5
+
+const submitLimiterIp = makeLimiter({ windowMs: 60 * 60 * 1000, max: SUBMIT_MAX_PER_IP_HOUR })
+const submitLimiterEmail = makeLimiter({ windowMs: 24 * 60 * 60 * 1000, max: SUBMIT_MAX_PER_EMAIL_DAY })
 
 // Блокировка перебора пароля. Счётчик в БД, а не в памяти: на Vercel каждый
 // холодный старт функции обнулял бы in-memory счётчик, и перебор шёл бы
@@ -290,6 +401,91 @@ async function noteLoginFailure(ipHash) {
   await pool.query(`DELETE FROM admin_login_failures WHERE created_at < now() - interval '1 day'`)
 }
 
+// Почасовой лимит заявок по IP — тоже в БД. In-memory счётчик (submitLimiterIp)
+// на Vercel живёт ровно до холодного старта и не разделяется между инстансами,
+// так что один адрес мог слать заявки без ограничений, просто попадая на разные
+// инстансы. Здесь, как и у входа, хранится не адрес, а его HMAC.
+async function submitBlockedInDb(ipHash, email) {
+  const { rows } = await pool.query(
+    `SELECT
+       (SELECT count(*)::int FROM application_submissions
+         WHERE ip_hash = $1 AND created_at > now() - interval '1 hour') AS by_ip,
+       (SELECT count(*)::int FROM applications
+         WHERE email = $2 AND created_at > now() - interval '1 day') AS by_email`,
+    [ipHash, email]
+  )
+  return rows[0].by_ip >= SUBMIT_MAX_PER_IP_HOUR || rows[0].by_email >= SUBMIT_MAX_PER_EMAIL_DAY
+}
+
+async function noteSubmission(ipHash) {
+  await pool.query('INSERT INTO application_submissions (ip_hash) VALUES ($1)', [ipHash])
+  await pool.query(`DELETE FROM application_submissions WHERE created_at < now() - interval '1 day'`)
+}
+
+/**
+ * Нормализует поля атрибуции из тела заявки: обрезает до лимита колонки (это
+ * аналитика, а не данные участника — лишнее лучше отрезать, чем отклонить
+ * заявку), убирает управляющие символы, реферер сводит к схеме+хосту+пути
+ * (без query — там бывают чужие токены), путь входа принимает только с «/».
+ * Не-строки (объект/массив/число в JSON) отбрасываются — иначе в БД и в
+ * UTM_SOURCE сделки уезжал бы «[object Object]».
+ */
+function pickAttribution(b) {
+  const clean = (v, max) =>
+    (typeof v === 'string' ? v : '')
+      // Управляющие символы вырезаются намеренно: метки уходят в CSV и в CRM.
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\u0000-\u001f\u007f]/g, '')
+      .trim()
+      .slice(0, max) || null
+
+  let referrer = clean(b.referrer, 2000)
+  if (referrer) {
+    try {
+      const u = new URL(referrer)
+      referrer = /^https?:$/.test(u.protocol) ? `${u.origin}${u.pathname}`.slice(0, ATTRIBUTION_COLUMNS.referrer) : null
+    } catch {
+      referrer = null
+    }
+  }
+
+  let landing_path = clean(b.landingPath, ATTRIBUTION_COLUMNS.landing_path)
+  if (landing_path && !landing_path.startsWith('/')) landing_path = null
+
+  return {
+    utm_source: clean(b.utmSource, ATTRIBUTION_COLUMNS.utm_source),
+    utm_medium: clean(b.utmMedium, ATTRIBUTION_COLUMNS.utm_medium),
+    utm_campaign: clean(b.utmCampaign, ATTRIBUTION_COLUMNS.utm_campaign),
+    utm_content: clean(b.utmContent, ATTRIBUTION_COLUMNS.utm_content),
+    utm_term: clean(b.utmTerm, ATTRIBUTION_COLUMNS.utm_term),
+    referrer,
+    landing_path,
+  }
+}
+
+// ---- переходы к регистрации ------------------------------------------------
+//
+// Регистрация идёт во внешней Google-форме, поэтому utm-метки до нашей БД с
+// заявкой не доезжают. Взамен клиент (lib/registration.ts) шлёт beacon при
+// клике по ссылке регистрации: язык, место кнопки и те же метки атрибуции.
+// Персональных данных здесь нет; IP — только HMAC в отдельном журнале лимита,
+// который чистится через сутки.
+
+const CLICK_MAX_PER_IP_HOUR = 30
+const clickLimiterIp = makeLimiter({ windowMs: 60 * 60 * 1000, max: CLICK_MAX_PER_IP_HOUR })
+const CLICK_LANGS = new Set(['ru', 'kk', 'en'])
+/** Колонки журнала переходов — одна точка для INSERT и CSV. */
+const CLICK_COLUMNS = ['id', 'created_at', 'lang', 'link_location', ...Object.keys(ATTRIBUTION_COLUMNS)]
+
+async function clickBlockedInDb(ipHash) {
+  const { rows } = await pool.query(
+    `SELECT count(*)::int AS n FROM registration_click_hits
+      WHERE ip_hash = $1 AND created_at > now() - interval '1 hour'`,
+    [ipHash]
+  )
+  return rows[0].n >= CLICK_MAX_PER_IP_HOUR
+}
+
 /**
  * Настоящий адрес посетителя. На Vercel — x-real-ip: его ставит сама
  * платформа, клиент подделать не может. На VPS перед нами ровно один nginx,
@@ -301,15 +497,38 @@ function clientIp(req) {
   return req.ip ?? 'unknown'
 }
 
+/**
+ * Хост, по которому к нам обратились. На Vercel x-forwarded-host ставит сама
+ * платформа. На VPS nginx выставляет Host из $host и НЕ трогает
+ * X-Forwarded-Host — клиентский заголовок дошёл бы до нас как есть, и пара
+ * «Origin: https://evil.example + X-Forwarded-Host: evil.example» проходила
+ * бы проверку sameOrigin. Поэтому вне Vercel верим только Host.
+ */
+function requestHost(req) {
+  const raw = process.env.VERCEL ? req.headers['x-forwarded-host'] || req.headers.host : req.headers.host
+  return String(raw ?? '').split(',')[0].trim().toLowerCase()
+}
+
 /** Запрос пришёл с нашей же страницы (сравнение точного хоста, не суффикса). */
 function sameOrigin(req) {
   const src = req.headers.origin || req.headers.referer
   if (!src) return false
   try {
-    return new URL(src).host === (req.headers['x-forwarded-host'] || req.headers.host)
+    const host = requestHost(req)
+    return Boolean(host) && new URL(src).host.toLowerCase() === host
   } catch {
     return false
   }
+}
+
+/** Ячейка CSV: кавычки удвоены; ячейка, начинающаяся с =, +, -, @ — экранирована
+ * апострофом, иначе Excel выполнит её как формулу (CSV-инъекция через поле
+ * «комментарий» заявки). */
+function csvCell(v) {
+  if (v == null) return ''
+  let s = v instanceof Date ? v.toISOString() : String(v)
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`
+  return /[",\n\r;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
 // ---- приложение -------------------------------------------------------------
@@ -378,34 +597,47 @@ app.post('/api/applications', async (req, res) => {
   if (!['ITECX college', 'ITECX academic'].includes(track)) return res.status(400).json({ error: 'track' })
   if ([firstName, lastName, organization].some((s) => s.length > 200) || message.length > 2000)
     return res.status(400).json({ error: 'too_long' })
+  const attribution = pickAttribution(b)
 
   if (!submitLimiterIp(ip) || !submitLimiterEmail(email)) {
     return res.status(429).json({ error: 'rate_limit' })
   }
-  // In-memory лимит живёт в пределах одного инстанса; повтор по email
+  // In-memory лимит живёт в пределах одного инстанса; повтор по IP и по email
   // проверяем ещё и в БД — это переживает холодные старты.
+  const ipHash = hashIp(ip)
+  await ensureSchema()
   try {
-    const { rows } = await pool.query(
-      `SELECT count(*)::int AS n FROM applications WHERE email = $1 AND created_at > now() - interval '1 day'`,
-      [email]
-    )
-    if (rows[0].n >= 5) return res.status(429).json({ error: 'rate_limit' })
+    if (await submitBlockedInDb(ipHash, email)) return res.status(429).json({ error: 'rate_limit' })
   } catch (e) {
     console.error('rate check failed (заявка пропущена дальше):', e.message)
   }
 
   let insertedId
   try {
+    const cols = Object.keys(ATTRIBUTION_COLUMNS)
     const { rows } = await pool.query(
-      `INSERT INTO applications (first_name, last_name, email, phone, track, organization, message)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [firstName, lastName, email, phone || null, track, organization || null, message || null]
+      `INSERT INTO applications (first_name, last_name, email, phone, track, organization, message, ${cols.join(', ')})
+       VALUES ($1, $2, $3, $4, $5, $6, $7, ${cols.map((_, i) => `$${i + 8}`).join(', ')}) RETURNING id`,
+      [
+        firstName,
+        lastName,
+        email,
+        phone || null,
+        track,
+        organization || null,
+        message || null,
+        ...cols.map((c) => attribution[c]),
+      ]
     )
     insertedId = rows[0].id
   } catch (e) {
     console.error('insert failed:', e.message)
     return res.status(500).json({ error: 'db' })
   }
+  // Не ждём запись в журнал IP-лимита перед ответом, но на Vercel она должна
+  // доехать — иначе функция замёрзнет после ответа, строка не запишется, и
+  // почасовой лимит по IP не сработает (см. waitUntil ниже).
+  const submissionTask = noteSubmission(ipHash).catch((e) => console.error('submission log failed:', e.message))
 
   // Заявка уже в БД — отвечаем пользователю СРАЗУ, не дожидаясь Bitrix.
   // Иначе медленный CRM (2 HTTP-вызова × до 6с) держит форму «на отправке»
@@ -413,7 +645,7 @@ app.post('/api/applications', async (req, res) => {
   // ошибку при фактически сохранённой заявке.
   res.json({ ok: true })
 
-  const bitrixTask = pushToBitrix({ firstName, lastName, email, phone, track, organization, message })
+  const bitrixTask = pushToBitrix({ firstName, lastName, email, phone, track, organization, message, attribution })
     .then((dealId) =>
       dealId
         ? pool.query('UPDATE applications SET bitrix_deal_id = $1 WHERE id = $2', [String(dealId), insertedId])
@@ -421,8 +653,9 @@ app.post('/api/applications', async (req, res) => {
     )
     .catch((e) => console.error('[bitrix] push failed (заявка сохранена в БД, в CRM не попала):', e.message))
 
-  // Vercel: не дать платформе заморозить функцию до завершения фоновой задачи.
-  vercelWaitUntil?.(bitrixTask)
+  // Vercel: не дать платформе заморозить функцию до завершения фоновых задач
+  // (обе уже с .catch, поэтому Promise.all не отклонится).
+  vercelWaitUntil?.(Promise.all([bitrixTask, submissionTask]))
 })
 
 app.post('/api/admin/login', async (req, res) => {
@@ -446,14 +679,138 @@ app.post('/api/admin/login', async (req, res) => {
   res.status(401).json({ error: 'invalid', retryAfter: 0 })
 })
 
-app.get('/api/applications', async (req, res) => {
+/** Токен панели из заголовка Authorization: Bearer … */
+function bearerOk(req) {
   const token = (req.headers.authorization ?? '').replace(/^Bearer\s+/i, '')
-  if (!verifyToken(token)) return res.status(401).json({ error: 'unauthorized' })
+  return verifyToken(token)
+}
+
+// Колонки заявки, которые отдаются панели и в CSV (= ApplicationRow в lib/db.ts).
+const APPLICATION_COLUMNS = [
+  'id',
+  'created_at',
+  'first_name',
+  'last_name',
+  'email',
+  'phone',
+  'track',
+  'organization',
+  'message',
+  ...Object.keys(ATTRIBUTION_COLUMNS),
+  'bitrix_deal_id',
+]
+/** Потолок строк для списка в панели и CSV-выгрузок. */
+const ADMIN_ROWS_LIMIT = 10000
+
+app.get('/api/applications', async (req, res) => {
+  if (!bearerOk(req)) return res.status(401).json({ error: 'unauthorized' })
+  await ensureSchema()
   try {
-    const { rows } = await pool.query('SELECT * FROM applications ORDER BY created_at DESC LIMIT 1000')
+    const { rows } = await pool.query(
+      `SELECT ${APPLICATION_COLUMNS.join(', ')} FROM applications ORDER BY created_at DESC LIMIT $1`,
+      [ADMIN_ROWS_LIMIT]
+    )
     res.json({ rows })
   } catch (e) {
     console.error('select failed:', e.message)
+    res.status(500).json({ error: 'db' })
+  }
+})
+
+// Выгрузка в CSV для панели организатора — те же права, что и у списка.
+// UTF-8 с BOM, чтобы Excel на Windows не показал кириллицу кракозябрами;
+// разделитель — запятая, даты в ISO.
+function sendCsv(res, columns, rows, name) {
+  const lines = [columns.join(',')]
+  for (const row of rows) lines.push(columns.map((c) => csvCell(row[c])).join(','))
+  const stamp = new Date().toISOString().slice(0, 10)
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+  res.setHeader('Content-Disposition', `attachment; filename="${name}-${stamp}.csv"`)
+  res.send(`\ufeff${lines.join('\r\n')}\r\n`)
+}
+
+app.get('/api/applications.csv', async (req, res) => {
+  if (!bearerOk(req)) return res.status(401).json({ error: 'unauthorized' })
+  await ensureSchema()
+  try {
+    const { rows } = await pool.query(
+      `SELECT ${APPLICATION_COLUMNS.join(', ')} FROM applications ORDER BY created_at DESC LIMIT $1`,
+      [ADMIN_ROWS_LIMIT]
+    )
+    sendCsv(res, APPLICATION_COLUMNS, rows, 'itecx-applications')
+  } catch (e) {
+    console.error('csv export failed:', e.message)
+    res.status(500).json({ error: 'db' })
+  }
+})
+
+// Beacon «клик по ссылке регистрации» (navigator.sendBeacon с нашей страницы).
+// Те же барьеры, что у заявки: проверка Origin, in-memory и БД-лимит по HMAC IP,
+// очистка меток через pickAttribution. Ответ без тела — beacon его не читает.
+app.post('/api/registration-click', async (req, res) => {
+  if (!sameOrigin(req)) return res.status(403).json({ error: 'origin' })
+  const ip = clientIp(req)
+  if (!clickLimiterIp(ip)) return res.status(429).json({ error: 'rate_limit' })
+  const b = req.body && typeof req.body === 'object' ? req.body : {}
+  const lang = CLICK_LANGS.has(b.lang) ? b.lang : null
+  const linkLocation = typeof b.linkLocation === 'string' && /^[a-z0-9-]{1,40}$/.test(b.linkLocation) ? b.linkLocation : null
+  const attribution = pickAttribution(b)
+  const ipHash = hashIp(ip)
+  await ensureSchema()
+  try {
+    if (await clickBlockedInDb(ipHash)) return res.status(429).json({ error: 'rate_limit' })
+    const cols = Object.keys(ATTRIBUTION_COLUMNS)
+    await pool.query(
+      `INSERT INTO registration_clicks (lang, link_location, ${cols.join(', ')})
+       VALUES ($1, $2, ${cols.map((_, i) => `$${i + 3}`).join(', ')})`,
+      [lang, linkLocation, ...cols.map((c) => attribution[c])]
+    )
+    await pool.query('INSERT INTO registration_click_hits (ip_hash) VALUES ($1)', [ipHash])
+    await pool.query(`DELETE FROM registration_click_hits WHERE created_at < now() - interval '1 day'`)
+  } catch (e) {
+    console.error('registration click failed:', e.message)
+    return res.status(503).json({ error: 'db' })
+  }
+  res.status(204).end()
+})
+
+// Сводка для панели: переходы к регистрации по источникам за последние N дней.
+// Источник — utm_source, иначе хост реферера, иначе «прямой».
+app.get('/api/registration-clicks/summary', async (req, res) => {
+  if (!bearerOk(req)) return res.status(401).json({ error: 'unauthorized' })
+  const days = Math.min(Math.max(Number.parseInt(String(req.query.days ?? '30'), 10) || 30, 1), 365)
+  await ensureSchema()
+  try {
+    const { rows } = await pool.query(
+      `SELECT COALESCE(utm_source, substring(referrer from '^https?://(?:www\\.)?([^/:]+)'), '(прямой)') AS source,
+              count(*)::int AS clicks
+         FROM registration_clicks
+        WHERE created_at > now() - make_interval(days => $1)
+        GROUP BY 1 ORDER BY clicks DESC, source LIMIT 10`,
+      [days]
+    )
+    const { rows: totalRows } = await pool.query(
+      `SELECT count(*)::int AS total FROM registration_clicks WHERE created_at > now() - make_interval(days => $1)`,
+      [days]
+    )
+    res.json({ days, total: totalRows[0].total, sources: rows })
+  } catch (e) {
+    console.error('click summary failed:', e.message)
+    res.status(500).json({ error: 'db' })
+  }
+})
+
+app.get('/api/registration-clicks.csv', async (req, res) => {
+  if (!bearerOk(req)) return res.status(401).json({ error: 'unauthorized' })
+  await ensureSchema()
+  try {
+    const { rows } = await pool.query(
+      `SELECT ${CLICK_COLUMNS.join(', ')} FROM registration_clicks ORDER BY created_at DESC LIMIT $1`,
+      [ADMIN_ROWS_LIMIT]
+    )
+    sendCsv(res, CLICK_COLUMNS, rows, 'itecx-registration-clicks')
+  } catch (e) {
+    console.error('click csv export failed:', e.message)
     res.status(500).json({ error: 'db' })
   }
 })

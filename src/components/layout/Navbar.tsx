@@ -130,6 +130,7 @@ export function Navbar() {
           <LangSwitcher ariaLabel={content.ui.langAria} />
           <a
             href={REGISTRATION_URL}
+            data-reg-location="navbar"
             target="_blank"
             rel="noopener noreferrer"
             className="press whitespace-nowrap rounded-full px-4 py-2.5 text-[13px] font-medium text-white xl:px-5"
@@ -205,6 +206,7 @@ export function Navbar() {
           ))}
           <a
             href={REGISTRATION_URL}
+            data-reg-location="navbar-mobile"
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setMenuOpen(false)}

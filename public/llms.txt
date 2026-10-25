@@ -1,0 +1,34 @@
+# ITECX — First Fibonacci International Congress on Engineering, Technology, and Mathematics
+
+> ITECX (itecx.kz) is an international science congress and research project
+> competition held in Kazakhstan for school students (grades 3–11, track
+> "ITECX college") and for university students, lecturers and professors
+> (track "ITECX academic"). Fields: educational technology, science,
+> mathematics, engineering. Stages: school stage → national congress in
+> Kazakhstan → international final in Italy. Participants prepare a four-part
+> research paper, a 10-minute talk and a poster (5-minute defense); the
+> national stage is held in the native language, the final in English. The
+> best works of the final are considered for publication in the indexed
+> Fibonacci scientific journal. Organizer: AZ GROUP LLC, Astana, Kazakhstan.
+
+## Русский (ru)
+- Главная — международный научный конгресс школьников и студентов: https://itecx.kz/
+- Руководство участника (12 шагов, 6 критериев оценки): https://itecx.kz/guide
+- Политика конфиденциальности: https://itecx.kz/privacy
+- Публичная оферта: https://itecx.kz/oferta
+
+## Қазақша (kk)
+- Басты бет — оқушылар мен студенттердің халықаралық ғылыми конгресі: https://itecx.kz/kk
+- Қатысушы нұсқаулығы: https://itecx.kz/kk/guide
+- Құпиялылық саясаты: https://itecx.kz/kk/privacy
+- Жария ұсыныс (оферта): https://itecx.kz/kk/oferta
+
+## English (en)
+- Home — international science congress for school and university students: https://itecx.kz/en
+- Participant guide: https://itecx.kz/en/guide
+- Privacy policy: https://itecx.kz/en/privacy
+- Public offer: https://itecx.kz/en/oferta
+
+## Optional
+- Sitemap: https://itecx.kz/sitemap.xml
+- Contact: info@az-group.kz
