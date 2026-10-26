@@ -1,11 +1,20 @@
-import { StrictMode } from 'react'
+import { StrictMode, type ComponentType } from 'react'
 import { renderToString } from 'react-dom/server'
 import { AppRoot } from './AppRoot.tsx'
+import App from './App.tsx'
+import { GuidePage } from './guide/GuidePage.tsx'
+import { PrivacyPage } from './privacy/PrivacyPage.tsx'
+import { OfertaPage } from './oferta/OfertaPage.tsx'
 import { ru } from './i18n/ru'
 import { en } from './i18n/en'
 import { kk } from './i18n/kk'
 import type { Content } from './i18n/ru'
-import { seoForPage, type Lang, type Page } from './i18n'
+import { registerDictionaries, seoForPage, type Lang, type Page } from './i18n'
+
+// В браузере словари и страницы грузятся чанками (i18n/index.tsx, pages.ts);
+// при сборке всё нужно сразу и синхронно.
+registerDictionaries({ ru, kk, en })
+const PAGES: Record<Page, ComponentType> = { home: App, guide: GuidePage, privacy: PrivacyPage, oferta: OfertaPage }
 
 /** Отдаёт разметку страницы на нужном языке. Вызывается при сборке из
  * scripts/prerender.mjs — по файлу на каждую пару «страница × язык», чтобы
@@ -13,7 +22,7 @@ import { seoForPage, type Lang, type Page } from './i18n'
 export function render(page: Page = 'home', lang: Lang = 'ru'): string {
   return renderToString(
     <StrictMode>
-      <AppRoot page={page} lang={lang} />
+      <AppRoot page={page} lang={lang} Page={PAGES[page]} />
     </StrictMode>,
   )
 }

@@ -6,9 +6,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { ru, type Content } from './ru'
-import { en } from './en'
-import { kk } from './kk'
+import type { Content } from './ru'
 
 export type Lang = 'ru' | 'kk' | 'en'
 
@@ -18,7 +16,59 @@ export const LANGS: { code: Lang; label: string }[] = [
   { code: 'en', label: 'EN' },
 ]
 
-const dictionaries: Record<Lang, Content> = { ru, kk, en }
+/**
+ * Словари грузятся по одному, отдельными чанками: посетителю /kk нужен только
+ * казахский текст, а не все три языка разом (вместе они — около трети
+ * клиентского бандла). main.tsx дожидается словаря первого рендера до
+ * гидратации, а prerender.mjs кладёт в HTML modulepreload на его чанк, так что
+ * лишнего сетевого шага нет. Остальные языки догружаются при переключении
+ * (и заранее — при наведении/фокусе на переключатель, см. LangSwitcher).
+ *
+ * Пререндер (entry-server.tsx) регистрирует все три словаря синхронно через
+ * registerDictionaries — на сервере ждать нечего.
+ */
+const dictionaries: Partial<Record<Lang, Content>> = {}
+
+const DICTIONARY_LOADERS: Record<Lang, () => Promise<Content>> = {
+  ru: () => import('./ru').then((m) => m.ru),
+  kk: () => import('./kk').then((m) => m.kk),
+  en: () => import('./en').then((m) => m.en),
+}
+
+const pendingDictionaries: Partial<Record<Lang, Promise<Content>>> = {}
+
+export function registerDictionaries(d: Partial<Record<Lang, Content>>) {
+  Object.assign(dictionaries, d)
+}
+
+/** Словарь языка: сразу, если уже загружен, иначе — один общий запрос чанка. */
+export function loadDictionary(lang: Lang): Promise<Content> {
+  const ready = dictionaries[lang]
+  if (ready) return Promise.resolve(ready)
+  pendingDictionaries[lang] ??= DICTIONARY_LOADERS[lang]().then(
+    (c) => (dictionaries[lang] = c),
+    (e) => {
+      // Сеть моргнула — следующая попытка должна пойти заново, а не получить
+      // тот же отклонённый промис.
+      delete pendingDictionaries[lang]
+      throw e
+    },
+  )
+  return pendingDictionaries[lang]
+}
+
+/** Прогрев словаря заранее (наведение на переключатель языка). Ошибку глотаем:
+ * при самом переключении загрузка всё равно повторится. */
+export function preloadDictionary(lang: Lang) {
+  loadDictionary(lang).catch(() => {})
+}
+
+/** Словарь, который обязан быть загружен к этому моменту. */
+function dictionary(lang: Lang): Content {
+  const c = dictionaries[lang]
+  if (!c) throw new Error(`i18n: словарь «${lang}» ещё не загружен`)
+  return c
+}
 
 const STORAGE_KEY = 'itecx-lang'
 
@@ -64,7 +114,7 @@ function legacyLangFromQuery(): Lang | null {
 
 /** Приоритет источника языка: путь → устаревший ?lang → сохранённый выбор →
  * русский по умолчанию. */
-function readSavedLang(): Lang {
+export function readSavedLang(): Lang {
   const fromUrl = langFromUrl() ?? legacyLangFromQuery()
   if (fromUrl) return fromUrl
   try {
@@ -124,7 +174,7 @@ function upsertMeta(selector: string, attr: 'name' | 'property', key: string, co
  * Google рендерит JS, поэтому эти правки видны краулеру; плюс корректное
  * превью в мессенджерах/соцсетях при шаринге страницы на нужном языке. */
 function applySeo(lang: Lang, page: Page) {
-  const c = dictionaries[lang]
+  const c = dictionary(lang)
   // У /guide и /privacy собственные title и description — иначе страница
   // показалась бы в выдаче и в превью мессенджеров как дубль лендинга.
   const seo = seoForPage(c, page)
@@ -174,9 +224,14 @@ export function LanguageProvider({
 
   // Сохранённый выбор языка (localStorage) применяем до первой отрисовки —
   // подмены текста на экране не видно. При заходе с ?lang= он уже учтён выше.
+  // Словарь сохранённого языка main.tsx загружает заранее, до гидратации, —
+  // тогда подмена синхронная, как и раньше. Запасной путь (словаря почему-то
+  // нет) — дождаться чанка и переключиться чуть позже.
   useIsomorphicLayoutEffect(() => {
     const initial = readSavedLang()
-    setLangState((current) => (initial === current ? current : initial))
+    const apply = () => setLangState((current) => (initial === current ? current : initial))
+    if (dictionaries[initial]) apply()
+    else loadDictionary(initial).then(apply, () => {})
   }, [])
 
   useEffect(() => {
@@ -205,21 +260,29 @@ export function LanguageProvider({
         /* non-fatal */
       }
     }
+    // Словарь обычно уже прогрет (наведение на переключатель) и готов сразу.
+    const ready = loadDictionary(next)
     if (reduced) {
-      apply()
+      ready.then(apply, () => {})
       return
     }
     // Fade out → swap dictionary → fade back in (double rAF so the new text
-    // paints at opacity 0 before the fade-in transition starts).
+    // paints at opacity 0 before the fade-in transition starts). The swap waits
+    // for both the 200ms fade and the dictionary chunk; if the chunk fails to
+    // load, the page fades back in on the current language.
     setSwitching(true)
-    window.setTimeout(() => {
-      apply()
-      requestAnimationFrame(() => requestAnimationFrame(() => setSwitching(false)))
-    }, 200)
+    const faded = new Promise((resolve) => window.setTimeout(resolve, 200))
+    Promise.all([ready, faded]).then(
+      () => {
+        apply()
+        requestAnimationFrame(() => requestAnimationFrame(() => setSwitching(false)))
+      },
+      () => setSwitching(false),
+    )
   }
 
   return (
-    <LanguageContext.Provider value={{ lang, switching, setLang, content: dictionaries[lang] }}>
+    <LanguageContext.Provider value={{ lang, switching, setLang, content: dictionary(lang) }}>
       {children}
     </LanguageContext.Provider>
   )

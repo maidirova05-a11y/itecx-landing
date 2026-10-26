@@ -1,7 +1,10 @@
 import { StrictMode, Suspense, lazy } from 'react'
 import { createRoot, hydrateRoot } from 'react-dom/client'
+import './fonts.css'
 import './index.css'
 import { AppRoot } from './AppRoot.tsx'
+import { PAGE_LOADERS } from './pages'
+import { langFromUrl, loadDictionary, readSavedLang } from './i18n'
 import { captureAttribution, trackRegistrationClicks } from './lib/registration'
 
 // Скрытый маршрут панели организатора: /admin. Ссылок на него на сайте нет,
@@ -52,23 +55,34 @@ if (isAdmin) {
       </Suspense>
     </StrictMode>,
   )
-} else if (container.hasChildNodes()) {
-  // Прод: лендинг уже отрендерён в разметку при сборке
-  // (scripts/prerender.mjs) — подхватываем готовый DOM, а не пересобираем его.
-  // Анимации не затронуты: .reveal стартует скрытым и раскрывается из
-  // useEffect, как и раньше.
-  hydrateRoot(
-    container,
-    <StrictMode>
-      <AppRoot page={page} />
-    </StrictMode>,
-  )
 } else {
-  // `npm run dev`: vite отдаёт index.html из исходников с пустым root —
-  // гидрировать нечего, строим DOM с нуля.
-  createRoot(container).render(
-    <StrictMode>
-      <AppRoot page={page} />
-    </StrictMode>,
-  )
+  // Код страницы и словарь её языка — отдельные чанки (их modulepreload уже
+  // стоит в HTML, см. scripts/prerender.mjs). Ждём их до гидратации: React
+  // должен с первого рендера выдать ту же разметку, что запечена в HTML.
+  // Словарь сохранённого выбора языка грузим заранее по той же причине —
+  // LanguageProvider применяет его синхронно, до первой отрисовки.
+  const urlLang = langFromUrl() ?? 'ru'
+  const savedLang = readSavedLang()
+  Promise.all([
+    PAGE_LOADERS[page](),
+    loadDictionary(urlLang),
+    savedLang === urlLang ? null : loadDictionary(savedLang).catch(() => null),
+  ]).then(([Page]) => {
+    const tree = (
+      <StrictMode>
+        <AppRoot page={page} Page={Page} />
+      </StrictMode>
+    )
+    if (container.hasChildNodes()) {
+      // Прод: страница уже отрендерена в разметку при сборке
+      // (scripts/prerender.mjs) — подхватываем готовый DOM, а не пересобираем
+      // его. Анимации не затронуты: .reveal стартует скрытым и раскрывается
+      // из useEffect, как и раньше.
+      hydrateRoot(container, tree)
+    } else {
+      // `npm run dev`: vite отдаёт index.html из исходников с пустым root —
+      // гидрировать нечего, строим DOM с нуля.
+      createRoot(container).render(tree)
+    }
+  })
 }

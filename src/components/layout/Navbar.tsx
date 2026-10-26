@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Container } from './Container'
 import { BrandMark } from '../common/BrandMark'
-import { LANGS, useLanguage } from '../../i18n'
+import { LANGS, preloadDictionary, useLanguage } from '../../i18n'
 import { REGISTRATION_URL } from '../../lib/registration'
 
 /** Общий для лендинга и /privacy — переключатель один и тот же на обеих страницах. */
@@ -19,6 +19,11 @@ export function LangSwitcher({ ariaLabel }: { ariaLabel: string }) {
           key={item.code}
           type="button"
           onClick={() => setLang(item.code)}
+          // Словари языков — отдельные чанки; прогреваем нужный, пока палец
+          // или курсор ещё на пути к кнопке, чтобы смена языка не ждала сети.
+          onPointerEnter={() => preloadDictionary(item.code)}
+          onFocus={() => preloadDictionary(item.code)}
+          onTouchStart={() => preloadDictionary(item.code)}
           aria-pressed={lang === item.code}
           className="press rounded-full px-2.5 py-1 font-mono text-[11px] tracking-[0.08em]"
           style={{
