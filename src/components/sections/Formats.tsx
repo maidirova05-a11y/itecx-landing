@@ -28,6 +28,8 @@ export function Formats() {
                   src={TRACK_PHOTOS[i].src}
                   objectPosition={TRACK_PHOTOS[i].position}
                   className="h-52 rounded-none border-0 sm:h-60"
+                  // Карточка — колонка из двух (до ~545px) или вся ширина.
+                  sizes="(min-width: 768px) min(50vw, 560px), 100vw"
                 >
                   <span
                     className="rounded-full px-3 py-1 font-mono text-[12.5px] tracking-tight text-white"

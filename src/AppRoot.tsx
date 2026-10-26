@@ -1,7 +1,4 @@
-import App from './App.tsx'
-import { PrivacyPage } from './privacy/PrivacyPage.tsx'
-import { GuidePage } from './guide/GuidePage.tsx'
-import { OfertaPage } from './oferta/OfertaPage.tsx'
+import type { ComponentType } from 'react'
 import { LanguageProvider, type Lang, type Page } from './i18n'
 
 /** Дерево страницы — общее для гидратации в браузере (main.tsx) и для
@@ -10,19 +7,16 @@ import { LanguageProvider, type Lang, type Page } from './i18n'
  *
  * Роутера в проекте нет: страницу выбирает вызывающий по pathname, а сборка
  * запекает каждую пару «страница × язык» в свой HTML-файл — index.html,
- * index.kk.html, privacy.en.html и т.д. (см. scripts/prerender.mjs). */
-export function AppRoot({ page = 'home', lang }: { page?: Page; lang?: Lang }) {
+ * index.kk.html, privacy.en.html и т.д. (см. scripts/prerender.mjs).
+ *
+ * Компонент страницы передаётся снаружи, а не импортируется здесь: в браузере
+ * каждая страница — свой чанк (src/pages.ts), и посетитель лендинга не качает
+ * код руководства, политики и оферты (и наоборот). Пререндер передаёт те же
+ * компоненты, импортированные статически. */
+export function AppRoot({ page = 'home', lang, Page }: { page?: Page; lang?: Lang; Page: ComponentType }) {
   return (
     <LanguageProvider page={page} initialLang={lang}>
-      {page === 'privacy' ? (
-        <PrivacyPage />
-      ) : page === 'guide' ? (
-        <GuidePage />
-      ) : page === 'oferta' ? (
-        <OfertaPage />
-      ) : (
-        <App />
-      )}
+      <Page />
     </LanguageProvider>
   )
 }

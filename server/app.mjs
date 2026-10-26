@@ -42,6 +42,7 @@ import crypto from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
+import compression from 'compression'
 
 // waitUntil продлевает жизнь serverless-функции Vercel после отправки ответа —
 // так Bitrix-синхронизация доезжает в фоне, не заставляя посетителя ждать.
@@ -159,6 +160,9 @@ function ensureSchema() {
          created_at timestamptz NOT NULL DEFAULT now()
        );
        CREATE INDEX IF NOT EXISTS application_submissions_created_idx ON application_submissions (created_at DESC);
+       -- Проверка лимита ищет строки одного адреса за час: без этого индекса
+       -- каждый запрос перебирал бы весь журнал за сутки.
+       CREATE INDEX IF NOT EXISTS application_submissions_ip_created_idx ON application_submissions (ip_hash, created_at);
        CREATE TABLE IF NOT EXISTS registration_clicks (
          id bigserial PRIMARY KEY,
          created_at timestamptz NOT NULL DEFAULT now(),
@@ -171,7 +175,8 @@ function ensureSchema() {
          ip_hash text NOT NULL,
          created_at timestamptz NOT NULL DEFAULT now()
        );
-       CREATE INDEX IF NOT EXISTS registration_click_hits_created_idx ON registration_click_hits (created_at DESC);`
+       CREATE INDEX IF NOT EXISTS registration_click_hits_created_idx ON registration_click_hits (created_at DESC);
+       CREATE INDEX IF NOT EXISTS registration_click_hits_ip_created_idx ON registration_click_hits (ip_hash, created_at);`
     )
     .catch((e) => {
       schemaReady = null
@@ -381,6 +386,30 @@ function ensureLoginTable() {
   return loginTableReady
 }
 
+/**
+ * Чистка журналов лимитов (строки старше суток). Раньше DELETE шёл на каждую
+ * заявку, клик и неудачный вход — лишний запрос и полный проход по журналу
+ * прямо в обработчике. Теперь не чаще раза в PRUNE_INTERVAL_MS на инстанс и
+ * без ожидания: проверки лимитов фильтруют по времени сами, так что строка,
+ * пережившая сутки на несколько минут, ни на что не влияет.
+ */
+const PRUNE_INTERVAL_MS = 10 * 60 * 1000
+const PRUNABLE_LOGS = new Set(['application_submissions', 'registration_click_hits', 'admin_login_failures'])
+const lastPruned = new Map()
+function pruneLog(table) {
+  if (!PRUNABLE_LOGS.has(table)) throw new Error(`pruneLog: неизвестная таблица ${table}`)
+  const now = Date.now()
+  if (now - (lastPruned.get(table) ?? 0) < PRUNE_INTERVAL_MS) return Promise.resolve()
+  lastPruned.set(table, now)
+  return pool
+    .query(`DELETE FROM ${table} WHERE created_at < now() - interval '1 day'`)
+    .then(() => undefined)
+    .catch((e) => {
+      lastPruned.delete(table) // попробуем снова со следующим запросом
+      console.error(`[db] очистка ${table} не удалась:`, e.message)
+    })
+}
+
 /** IP хранится только как HMAC — это персональные данные, а нужно лишь равенство. */
 const hashIp = (ip) => crypto.createHmac('sha256', TOKEN_SECRET).update(ip).digest('hex').slice(0, 32)
 
@@ -398,7 +427,7 @@ async function loginBlocked(ipHash) {
 async function noteLoginFailure(ipHash) {
   await ensureLoginTable()
   await pool.query('INSERT INTO admin_login_failures (ip_hash) VALUES ($1)', [ipHash])
-  await pool.query(`DELETE FROM admin_login_failures WHERE created_at < now() - interval '1 day'`)
+  await pruneLog('admin_login_failures')
 }
 
 // Почасовой лимит заявок по IP — тоже в БД. In-memory счётчик (submitLimiterIp)
@@ -419,7 +448,7 @@ async function submitBlockedInDb(ipHash, email) {
 
 async function noteSubmission(ipHash) {
   await pool.query('INSERT INTO application_submissions (ip_hash) VALUES ($1)', [ipHash])
-  await pool.query(`DELETE FROM application_submissions WHERE created_at < now() - interval '1 day'`)
+  await pruneLog('application_submissions')
 }
 
 /**
@@ -572,6 +601,12 @@ app.use((req, res, next) => {
   if (req.path.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store')
   next()
 })
+
+// Сжатие ответов — только вне Vercel: там это делает сама платформа (и
+// отдаёт статику мимо Express). На VPS/в Docker без него HTML, бандл и
+// CSV-выгрузки шли бы несжатыми, если перед Node нет настроенного nginx gzip.
+// Стоит до маршрутов, чтобы сжимались и ответы API.
+if (!process.env.VERCEL) app.use(compression())
 
 app.use(express.json({ limit: '32kb' }))
 
@@ -760,13 +795,18 @@ app.post('/api/registration-click', async (req, res) => {
   try {
     if (await clickBlockedInDb(ipHash)) return res.status(429).json({ error: 'rate_limit' })
     const cols = Object.keys(ATTRIBUTION_COLUMNS)
+    // Клик и строка журнала лимита — одним запросом (один round-trip к БД
+    // вместо двух; оба INSERT в одной транзакции, как и прежде по смыслу).
     await pool.query(
-      `INSERT INTO registration_clicks (lang, link_location, ${cols.join(', ')})
-       VALUES ($1, $2, ${cols.map((_, i) => `$${i + 3}`).join(', ')})`,
-      [lang, linkLocation, ...cols.map((c) => attribution[c])]
+      `WITH click AS (
+         INSERT INTO registration_clicks (lang, link_location, ${cols.join(', ')})
+         VALUES ($1, $2, ${cols.map((_, i) => `$${i + 4}`).join(', ')})
+       )
+       INSERT INTO registration_click_hits (ip_hash) VALUES ($3)`,
+      [lang, linkLocation, ipHash, ...cols.map((c) => attribution[c])]
     )
-    await pool.query('INSERT INTO registration_click_hits (ip_hash) VALUES ($1)', [ipHash])
-    await pool.query(`DELETE FROM registration_click_hits WHERE created_at < now() - interval '1 day'`)
+    // Чистка журнала — в фоне (на Vercel waitUntil не даёт её заморозить).
+    vercelWaitUntil?.(pruneLog('registration_click_hits'))
   } catch (e) {
     console.error('registration click failed:', e.message)
     return res.status(503).json({ error: 'db' })

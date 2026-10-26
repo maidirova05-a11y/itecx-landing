@@ -20,8 +20,9 @@
  * useEffect — то есть ровно так же, как до пререндера. Первый кадр в браузере
  * идентичен прежнему.
  */
-import { readFile, writeFile, rm } from 'node:fs/promises'
+import { readFile, readdir, writeFile, rm } from 'node:fs/promises'
 import path from 'node:path'
+import { brotliCompressSync, gzipSync, constants as zlibConstants } from 'node:zlib'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -29,6 +30,71 @@ const dist = path.join(root, 'dist')
 const ssrDir = path.join(root, '.ssr-build')
 
 const ROOT_DIV = '<div id="root"></div>'
+
+/*
+ * Чанки страниц и словарей (src/pages.ts, i18n/index.tsx) грузятся динамически,
+ * то есть браузер узнал бы о них только после выполнения основного бандла —
+ * лишний сетевой шаг перед гидратацией. По манифесту сборки ставим в каждую
+ * страницу modulepreload ровно на её чанк и словарь её языка (с зависимостями),
+ * и они качаются параллельно с основным бандлом.
+ */
+const manifestPath = path.join(dist, '.vite', 'manifest.json')
+const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
+
+function chunkClosure(key, seen = new Set()) {
+  if (seen.has(key)) return seen
+  if (!manifest[key]) throw new Error(`prerender: в манифесте сборки нет ${key} — модуль переименован?`)
+  seen.add(key)
+  for (const dep of manifest[key].imports ?? []) chunkClosure(dep, seen)
+  return seen
+}
+// Зависимости точки входа vite уже сам подключил в index.html.
+const entryChunks = chunkClosure('index.html')
+
+function modulePreloads(keys) {
+  const files = new Set()
+  for (const key of keys) for (const k of chunkClosure(key)) if (!entryChunks.has(k)) files.add(manifest[k].file)
+  return [...files].map((f) => `<link rel="modulepreload" crossorigin href="/${f}">`)
+}
+
+const PAGE_MODULE = {
+  home: 'src/App.tsx',
+  guide: 'src/guide/GuidePage.tsx',
+  privacy: 'src/privacy/PrivacyPage.tsx',
+  oferta: 'src/oferta/OfertaPage.tsx',
+}
+const dictionaryModule = (lang) => `src/i18n/${lang}.ts`
+
+/*
+ * Шрифты (src/fonts.css) браузер находит только после разбора CSS, а
+ * отрисовка текста ждёт их до font-display: swap. preload начинает загрузку
+ * сразу. Только наборы, которые реально нужны странице (по unicode-range):
+ * латиница Inter есть везде (ITECX, цифры, e-mail), кириллица — на ru/kk,
+ * расширенная кириллица (ә, ғ, қ, ң, ө, ү, һ) — на kk; JetBrains Mono
+ * (латиница) — подписи и слоган «Kazakhstan», последний — LCP лендинга.
+ * Остальные наборы грузятся как раньше, по необходимости.
+ */
+const assetFiles = await readdir(path.join(dist, 'assets'))
+function fontAsset(name) {
+  // Vite: <имя>-<хэш из 8 символов>.woff2; «inter-latin» не путаем с «inter-latin-ext».
+  const re = new RegExp(`^${name}-[\\w-]{8}\\.woff2$`)
+  const found = assetFiles.filter((f) => re.test(f))
+  if (found.length !== 1) throw new Error(`prerender: шрифт ${name} — найдено ${found.length} файлов в dist/assets`)
+  return found[0]
+}
+const FONT_PRELOADS = {
+  ru: ['inter-cyrillic', 'inter-latin', 'jetbrains-mono-latin'],
+  kk: ['inter-cyrillic', 'inter-cyrillic-ext', 'inter-latin', 'jetbrains-mono-latin'],
+  en: ['inter-latin', 'jetbrains-mono-latin'],
+}
+const fontPreloads = (lang) =>
+  FONT_PRELOADS[lang].map((f) => `<link rel="preload" href="/assets/${fontAsset(f)}" as="font" type="font/woff2" crossorigin>`)
+
+/** Вставляет строки перед </head>. */
+function injectHead(html, lines) {
+  if (!lines.length) return html
+  return replaceOnce(html, /\n?\s*<\/head>/, `\n    ${lines.join('\n    ')}\n  </head>`, '</head>')
+}
 
 // pathToFileURL обязателен: на Windows голый абсолютный путь в import() падает.
 const { render, targets, buildSitemap } = await import(
@@ -56,7 +122,7 @@ if (!template.includes(ROOT_DIV)) {
 // панели — заявки с персональными данными участников.
 await writeFile(
   path.join(dist, 'admin.html'),
-  template
+  injectHead(template, modulePreloads(['src/admin/AdminPage.tsx']))
     .replace(
       /<meta name="robots"[^>]*>/,
       '<meta name="robots" content="noindex, nofollow" />',
@@ -150,7 +216,13 @@ function applyMeta(html, t) {
 
 for (const t of targets) {
   const markup = render(t.page, t.lang)
-  const html = applyMeta(template, t).replace(ROOT_DIV, `<div id="root">${markup}</div>`)
+  const html = injectHead(applyMeta(template, t), [
+    ...fontPreloads(t.lang),
+    ...modulePreloads([PAGE_MODULE[t.page], dictionaryModule(t.lang)]),
+  ]).replace(
+    ROOT_DIV,
+    `<div id="root">${markup}</div>`,
+  )
   await writeFile(path.join(dist, t.file), html)
   console.log(`prerender: ${t.file} — ${markup.length} символов разметки (${t.page}/${t.lang})`)
 }
@@ -163,6 +235,28 @@ for (const t of targets) {
 await writeFile(path.join(dist, 'sitemap.xml'), buildSitemap())
 
 await rm(ssrDir, { recursive: true, force: true })
+// Манифест нужен был только здесь; раздавать его наружу незачем.
+await rm(path.join(dist, '.vite'), { recursive: true, force: true })
+
+/*
+ * Сжатые копии текстовых файлов для VPS/Docker (server/index.mjs отдаёт
+ * file.br / file.gz вместо сжатия на лету — CPU на запрос не тратится).
+ * Максимальное сжатие здесь бесплатно: оно делается один раз при сборке.
+ * Vercel эти файлы не использует (сжимает сам), они просто лежат рядом.
+ */
+const COMPRESSIBLE = /\.(html|js|css|svg|xml|txt|json|webmanifest)$/
+let compressedCount = 0
+for (const entry of await readdir(dist, { recursive: true })) {
+  const rel = String(entry)
+  if (!COMPRESSIBLE.test(rel)) continue
+  const file = path.join(dist, rel)
+  const body = await readFile(file)
+  if (body.length < 1024) continue
+  await writeFile(`${file}.br`, brotliCompressSync(body, { params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 11 } }))
+  await writeFile(`${file}.gz`, gzipSync(body, { level: 9 }))
+  compressedCount++
+}
 
 console.log(`prerender: dist/sitemap.xml — ${targets.length} адресов`)
 console.log('prerender: dist/admin.html создан с пустым root, noindex')
+console.log(`prerender: ${compressedCount} файлов сжато заранее (.br/.gz)`)
