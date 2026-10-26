@@ -63,7 +63,14 @@ export function Stages() {
         </div>
 
         <Reveal delayMs={200} className="mt-16 md:mt-20">
-          <PhotoCard src="/images/stages.jpg" objectPosition="center 45%" className="h-64 sm:h-80">
+          <PhotoCard
+            src="/images/stages.jpg"
+            objectPosition="center 45%"
+            className="h-64 sm:h-80"
+            // На всю ширину контейнера; на узком экране низкая рамка (256–320px)
+            // режет фото 16:9 по высоте, поэтому не меньше ~570px.
+            sizes="(min-width: 768px) min(100vw, 1120px), max(100vw, 570px)"
+          >
             <p className="max-w-lg text-[15px] leading-relaxed text-text sm:text-[16px]">{stages.note}</p>
           </PhotoCard>
         </Reveal>

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { webpFor } from './webp'
+import { webpFor, webpSrcSet } from './webp'
 
 /** Framed illustrative photo (decorative — hidden from assistive tech, the
  * surrounding text carries the meaning). Children render over the bottom fade. */
@@ -7,17 +7,29 @@ export function PhotoCard({
   src,
   objectPosition = 'center',
   className = '',
+  sizes,
   children,
 }: {
   src: string
   objectPosition?: string
   className?: string
+  /**
+   * Какой ширины (в CSS-пикселях) фото нужно в этой раскладке — с учётом
+   * object-cover: если рамка выше пропорций фото, нужна ширина больше
+   * ширины рамки. Задан — браузер выбирает копию из srcset (см. webp.ts);
+   * не задан — грузится полноразмерный WebP, как раньше.
+   */
+  sizes?: string
   children?: ReactNode
 }) {
   return (
     <figure className={`photo m-0 ${className}`} aria-hidden={children ? undefined : true}>
       <picture className="contents">
-        <source srcSet={webpFor(src)} type="image/webp" />
+        {sizes ? (
+          <source srcSet={webpSrcSet(src)} sizes={sizes} type="image/webp" />
+        ) : (
+          <source srcSet={webpFor(src)} type="image/webp" />
+        )}
         <img
           src={src}
           alt=""

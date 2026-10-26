@@ -24,7 +24,14 @@ export function About() {
           </div>
 
           <Reveal delayMs={200} className="md:col-span-5">
-            <PhotoCard src="/images/about.jpg" objectPosition="center 40%" className="aspect-[4/3] md:aspect-[4/5]" />
+            <PhotoCard
+              src="/images/about.jpg"
+              objectPosition="center 40%"
+              className="aspect-[4/3] md:aspect-[4/5]"
+              // Рамка 4:3 / 4:5 уже фото 3:2 — по высоте: ~1.1 ширины рамки
+              // на телефоне, до ~830px на десктопе (колонка 5/12).
+              sizes="(min-width: 768px) min(66vw, 860px), calc(113vw - 45px)"
+            />
           </Reveal>
         </div>
       </Container>
