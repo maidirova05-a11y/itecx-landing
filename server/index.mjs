@@ -4,6 +4,7 @@
  * (На Vercel этот файл не используется — там точка входа api/index.mjs.)
  */
 
+import { readdirSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import express from 'express'
@@ -40,8 +41,57 @@ const HTML_CACHE = 'no-cache'
 const ASSET_CACHE = 'public, max-age=31536000, immutable'
 const PUBLIC_CACHE = 'public, max-age=86400'
 
-const sendPage = (file) => (_req, res) =>
-  res.sendFile(path.join(dist, file), { headers: { 'Cache-Control': HTML_CACHE } })
+const cacheFor = (rel) =>
+  rel.startsWith('assets/') ? ASSET_CACHE : rel.endsWith('.html') ? HTML_CACHE : PUBLIC_CACHE
+
+/*
+ * Заранее сжатые копии (file.br / file.gz кладёт scripts/prerender.mjs).
+ * Сжимать на лету каждый ответ — это CPU на каждый запрос: под нагрузкой
+ * GET / упирался в brotli, а не в сеть. Готовые копии отдаются как есть;
+ * middleware compression (server/app.mjs) видит Content-Encoding и второй
+ * раз не жмёт. Список файлов — снимок dist на старте: искать по нему
+ * безопаснее, чем собирать путь к файлу из адреса запроса.
+ */
+const precompressed = new Set()
+for (const entry of readdirSync(dist, { recursive: true })) {
+  const rel = String(entry).split(path.sep).join('/')
+  if (rel.endsWith('.br') || rel.endsWith('.gz')) precompressed.add(rel)
+}
+const ENCODINGS = [
+  ['br', '.br'],
+  ['gzip', '.gz'],
+]
+
+/** Отдаёт файл из dist (rel — путь относительно dist): сжатую копию, если
+ * она есть и клиент её принимает, иначе сам файл. */
+function sendDist(req, res, rel, cacheControl = cacheFor(rel)) {
+  const accept = String(req.headers['accept-encoding'] ?? '')
+  const headers = { 'Cache-Control': cacheControl, Vary: 'Accept-Encoding' }
+  for (const [encoding, ext] of ENCODINGS) {
+    if (precompressed.has(rel + ext) && new RegExp(`\\b${encoding}\\b`).test(accept)) {
+      // Тип — по исходному имени (send не перезапишет уже выставленный).
+      res.type(path.extname(rel))
+      return res.sendFile(path.join(dist, rel + ext), { headers: { ...headers, 'Content-Encoding': encoding } })
+    }
+  }
+  return res.sendFile(path.join(dist, rel), { headers })
+}
+
+const sendPage = (file) => (req, res) => sendDist(req, res, file)
+
+// Сжатые копии статики по прямым адресам (/, /assets/…, /sitemap.xml).
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next()
+  let rel
+  try {
+    rel = decodeURIComponent(req.path).replace(/^\/+/, '')
+  } catch {
+    return next()
+  }
+  if (rel === '' || rel.endsWith('/')) rel += 'index.html'
+  if (!precompressed.has(rel + '.br') && !precompressed.has(rel + '.gz')) return next()
+  sendDist(req, res, rel)
+})
 
 for (const lang of ['kk', 'en']) {
   app.get(`/${lang}`, sendPage(`index.${lang}.html`))
@@ -67,9 +117,7 @@ app.use(
       res.setHeader('Cache-Control', file.endsWith('.html') ? HTML_CACHE : PUBLIC_CACHE),
   })
 )
-app.get('/admin', (_req, res) =>
-  res.sendFile(path.join(dist, 'admin.html'), { headers: { 'Cache-Control': 'no-store' } })
-)
+app.get('/admin', (req, res) => sendDist(req, res, 'admin.html', 'no-store'))
 
 // На VPS слушаем только 127.0.0.1 — наружу порт не торчит,
 // внешний трафик заходит исключительно через nginx-прокси.

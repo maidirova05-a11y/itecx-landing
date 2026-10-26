@@ -22,6 +22,7 @@
  */
 import { readFile, readdir, writeFile, rm } from 'node:fs/promises'
 import path from 'node:path'
+import { brotliCompressSync, gzipSync, constants as zlibConstants } from 'node:zlib'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -237,5 +238,25 @@ await rm(ssrDir, { recursive: true, force: true })
 // Манифест нужен был только здесь; раздавать его наружу незачем.
 await rm(path.join(dist, '.vite'), { recursive: true, force: true })
 
+/*
+ * Сжатые копии текстовых файлов для VPS/Docker (server/index.mjs отдаёт
+ * file.br / file.gz вместо сжатия на лету — CPU на запрос не тратится).
+ * Максимальное сжатие здесь бесплатно: оно делается один раз при сборке.
+ * Vercel эти файлы не использует (сжимает сам), они просто лежат рядом.
+ */
+const COMPRESSIBLE = /\.(html|js|css|svg|xml|txt|json|webmanifest)$/
+let compressedCount = 0
+for (const entry of await readdir(dist, { recursive: true })) {
+  const rel = String(entry)
+  if (!COMPRESSIBLE.test(rel)) continue
+  const file = path.join(dist, rel)
+  const body = await readFile(file)
+  if (body.length < 1024) continue
+  await writeFile(`${file}.br`, brotliCompressSync(body, { params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 11 } }))
+  await writeFile(`${file}.gz`, gzipSync(body, { level: 9 }))
+  compressedCount++
+}
+
 console.log(`prerender: dist/sitemap.xml — ${targets.length} адресов`)
 console.log('prerender: dist/admin.html создан с пустым root, noindex')
+console.log(`prerender: ${compressedCount} файлов сжато заранее (.br/.gz)`)
