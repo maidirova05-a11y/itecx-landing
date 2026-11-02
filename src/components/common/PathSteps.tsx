@@ -1,4 +1,4 @@
-/** A track's route as arrow-linked pills; the last stop (the final) glows red. */
+/** A track's route as arrow-linked pills; the last stop (the final) is marked red. */
 export function PathSteps({ steps, className = '' }: { steps: readonly string[]; className?: string }) {
   return (
     <ol className={`flex flex-wrap items-center gap-2 ${className}`}>
@@ -12,8 +12,7 @@ export function PathSteps({ steps, className = '' }: { steps: readonly string[];
                 last
                   ? {
                       borderColor: 'rgb(227 31 45 / 0.55)',
-                      background: 'rgb(227 31 45 / 0.12)',
-                      boxShadow: '0 0 18px rgb(227 31 45 / 0.25)',
+                      background: 'rgb(227 31 45 / 0.1)',
                       color: '#fff',
                     }
                   : { borderColor: 'var(--color-hairline-strong)', color: 'var(--color-text-muted)' }

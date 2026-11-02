@@ -15,7 +15,6 @@ export function Formats() {
 
   return (
     <section id="formats" className="relative overflow-hidden py-24 md:py-32">
-      <div aria-hidden="true" className="aura aura-red -right-40 top-1/3 h-[420px] w-[520px]" />
 
       <Container className="relative">
         <SectionHeader kicker={formats.kicker} title={formats.title} />
@@ -51,7 +50,7 @@ export function Formats() {
 
         <Reveal delayMs={200}>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <span className="mr-1 font-mono text-[11px] uppercase tracking-[0.16em] text-text-faint">
+            <span className="mr-1 font-mono text-[12px] text-text-faint">
               {formats.categoriesLabel}
             </span>
             {formats.categories.map((c) => (

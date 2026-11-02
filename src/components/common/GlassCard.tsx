@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-/** Frosted card with a faint top light; `hover` adds the blue-rim lift. */
+/** Flat card on a surface step with a hairline; `hover` brightens the border. */
 export function GlassCard({
   children,
   className = '',

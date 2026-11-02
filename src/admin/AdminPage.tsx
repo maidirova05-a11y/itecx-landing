@@ -300,7 +300,7 @@ function Dashboard() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <div className="flex items-center gap-3">
             <BrandMark size={36} fontSize={11} />
-            <h1 className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-muted">Заявки</h1>
+            <h1 className="font-mono text-[12px] text-text-muted">Заявки</h1>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -383,7 +383,7 @@ function Dashboard() {
           <table className="w-full min-w-[960px] text-left text-[13.5px]">
             <thead>
               <tr
-                className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-faint"
+                className="font-mono text-[12px] text-text-faint"
                 style={{ borderBottom: '1px solid var(--color-hairline)' }}
               >
                 <th className="px-4 py-3 font-medium">Дата</th>
@@ -423,7 +423,7 @@ function Dashboard() {
                     <td className="whitespace-nowrap px-4 py-3 text-text-muted">{r.phone ?? '—'}</td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <span
-                        className="rounded-full border px-2.5 py-1 font-mono text-[11px]"
+                        className="rounded-full border px-2.5 py-1 font-mono text-[12px]"
                         style={{
                           borderColor: 'var(--color-hairline-strong)',
                           color: r.track === 'ITECX college' ? 'var(--color-accent-soft)' : 'var(--color-text-muted)',

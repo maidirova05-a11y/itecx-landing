@@ -30,9 +30,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background:
-    radial-gradient(60% 50% at 50% 100%, rgb(20 51 94 / 0.35), transparent 70%),
-    radial-gradient(40% 35% at 50% 40%, rgb(var(--red) / 0.06), transparent 70%);
+  background: radial-gradient(60% 50% at 50% 100%, rgb(20 51 94 / 0.22), transparent 70%);
   animation: heroFade 2.4s var(--ease-out-soft) var(--t-planet) both;
 }
 
@@ -56,9 +54,6 @@
   margin-left: -1.5px;
   transform-origin: 50% 100%;
   background: linear-gradient(to bottom, #fff, rgb(255 90 100) 4%, rgb(var(--red) / 0.9) 30%, rgb(var(--red) / 0.4));
-  box-shadow:
-    0 0 10px 1px rgb(var(--red) / 0.9),
-    0 0 36px 6px rgb(var(--red) / 0.45);
   border-radius: 2px;
   opacity: 0;
   animation: heroShaft 1.2s var(--ease-out-soft) var(--t-shaft) both;
@@ -103,14 +98,6 @@
     transparent
   );
   opacity: 0.4;
-}
-.hero-beam::before {
-  content: "";
-  position: absolute;
-  inset: 0 -10px;
-  background: inherit;
-  filter: blur(12px);
-  opacity: 0.85;
 }
 .hero-beam--a {
   transform: rotate(34deg);
@@ -206,7 +193,7 @@
   100% {
     opacity: 1;
     transform: scale(1);
-    filter: blur(0) brightness(1) drop-shadow(0 0 28px rgb(var(--red) / 0.38));
+    filter: blur(0) brightness(1);
   }
 }
 
@@ -269,7 +256,7 @@
   0% {
     opacity: 0;
     transform: translateX(-0.6em);
-    letter-spacing: 0.3em;
+    letter-spacing: 0.1em;
   }
   100% {
     opacity: 1;
@@ -312,7 +299,7 @@
   height: 46svh;
   translate: -50% -50%;
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgb(var(--blue) / 0.55), rgb(var(--blue) / 0.16) 55%, transparent);
+  background: radial-gradient(closest-side, rgb(var(--blue) / 0.32), rgb(var(--blue) / 0.1) 55%, transparent);
   filter: blur(28px);
   animation: heroAtmo 2.4s var(--ease-out-soft) var(--t-atmo) both;
 }
