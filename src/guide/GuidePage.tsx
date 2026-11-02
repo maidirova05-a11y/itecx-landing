@@ -34,7 +34,7 @@ function RegisterButton({ label, className = '' }: { label: string; className?: 
       target="_blank"
       rel="noopener noreferrer"
       className={`press rounded-full px-7 py-3.5 text-[14px] font-medium text-white ${className}`}
-      style={{ background: 'var(--color-accent)', boxShadow: '0 0 32px rgb(227 31 45 / 0.35)' }}
+      style={{ background: 'var(--color-accent)' }}
     >
       {label}
     </a>

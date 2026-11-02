@@ -23,7 +23,7 @@ export function GuideTeaser() {
               <p className="mt-5 max-w-md text-[16px] leading-relaxed text-text-muted">{guideTeaser.text}</p>
               <span
                 className="mt-8 inline-flex items-center gap-2 rounded-full px-6 py-3 text-[14px] font-medium text-white"
-                style={{ background: 'var(--color-accent)', boxShadow: '0 0 32px rgb(227 31 45 / 0.35)' }}
+                style={{ background: 'var(--color-accent)' }}
               >
                 {guideTeaser.cta}
                 <span

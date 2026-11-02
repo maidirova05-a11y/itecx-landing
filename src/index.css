@@ -153,7 +153,6 @@ button:focus-visible,
   height: 6px;
   border-radius: 50%;
   background: var(--color-accent);
-  box-shadow: 0 0 10px 2px rgb(227 31 45 / 0.6);
 }
 
 .section-title {
@@ -163,10 +162,7 @@ button:focus-visible,
   line-height: 1.1;
   letter-spacing: -0.02em;
   text-wrap: balance;
-  background: linear-gradient(180deg, #fff 30%, #c4d3f0);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: #fff;
 }
 
 /* Card: faint top light, blue rim on hover */

@@ -106,7 +106,7 @@ export function Hero() {
             <a
               href="#about"
               className="press rounded-full px-7 py-3.5 text-[14px] font-medium text-white"
-              style={{ background: 'var(--color-accent)', boxShadow: '0 0 32px rgb(227 31 45 / 0.35)' }}
+              style={{ background: 'var(--color-accent)' }}
             >
               {hero.ctaPrimary}
             </a>
