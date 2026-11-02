@@ -54,5 +54,36 @@ CREATE TABLE IF NOT EXISTS application_submissions (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS application_submissions_created_idx ON application_submissions (created_at DESC);
+CREATE INDEX IF NOT EXISTS application_submissions_ip_created_idx ON application_submissions (ip_hash, created_at);
+
+-- Переходы по ссылкам на внешнюю форму регистрации (POST /api/registration-click).
+CREATE TABLE IF NOT EXISTS registration_clicks (
+  id bigserial PRIMARY KEY,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  lang text,
+  utm_source text,
+  utm_medium text,
+  utm_campaign text,
+  utm_content text,
+  utm_term text,
+  referrer text,
+  landing_path text,
+  link_location text
+);
+CREATE INDEX IF NOT EXISTS registration_clicks_created_idx ON registration_clicks (created_at DESC);
+-- Журнал лимита переходов по IP (хранится HMAC адреса); чистится приложением.
+CREATE TABLE IF NOT EXISTS registration_click_hits (
+  ip_hash text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS registration_click_hits_created_idx ON registration_click_hits (created_at DESC);
+CREATE INDEX IF NOT EXISTS registration_click_hits_ip_created_idx ON registration_click_hits (ip_hash, created_at);
+
+-- Неудачные входы в админку (блокировка перебора пароля).
+CREATE TABLE IF NOT EXISTS admin_login_failures (
+  ip_hash text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS admin_login_failures_created_idx ON admin_login_failures (created_at DESC);
 
 RESET ROLE;
