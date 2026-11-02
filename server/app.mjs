@@ -39,10 +39,17 @@
 
 import express from 'express'
 import crypto from 'node:crypto'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import pg from 'pg'
 import compression from 'compression'
+import { config } from './lib/config.mjs'
+import { log, errFields } from './lib/logger.mjs'
+import {
+  ATTRIBUTION_COLUMNS,
+  validateApplication,
+  pickAttribution,
+  pickClick,
+  parseDays,
+} from './lib/validate.mjs'
 
 // waitUntil продлевает жизнь serverless-функции Vercel после отправки ответа —
 // так Bitrix-синхронизация доезжает в фоне, не заставляя посетителя ждать.
@@ -57,36 +64,14 @@ try {
 
 // ---- конфигурация ----------------------------------------------------------
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-// Локально секреты лежат в server/.env; на Vercel файла нет — переменные
-// приходят из панели, поэтому отсутствие файла не ошибка.
-try {
-  process.loadEnvFile?.(path.join(__dirname, '.env'))
-} catch {
-  /* нет файла — работаем от process.env */
-}
-
 const {
-  DATABASE_URL,
-  ADMIN_PASSWORD_HASH,
-  ADMIN_SALT = 'itecx-admin-v1',
-  TOKEN_SECRET,
-  // Необязательно: если не задан, заявки просто не дублируются в Bitrix24 —
-  // сайт и без него работает штатно (см. pushToBitrix ниже).
-  BITRIX_WEBHOOK_URL,
-  BITRIX_CATEGORY_ID = '17',
-} = process.env
-
-if (!DATABASE_URL || !ADMIN_PASSWORD_HASH || !TOKEN_SECRET) {
-  throw new Error('Не заданы обязательные переменные: DATABASE_URL, ADMIN_PASSWORD_HASH, TOKEN_SECRET')
-}
-if (!isLikelyStrongSecret(TOKEN_SECRET)) {
-  console.warn('[security] TOKEN_SECRET выглядит коротким/предсказуемым — сгенерируйте `openssl rand -hex 32`.')
-}
-
-function isLikelyStrongSecret(s) {
-  return typeof s === 'string' && s.length >= 32
-}
+  databaseUrl: DATABASE_URL,
+  adminPasswordHash: ADMIN_PASSWORD_HASH,
+  adminSalt: ADMIN_SALT,
+  tokenSecret: TOKEN_SECRET,
+  bitrixWebhookUrl: BITRIX_WEBHOOK_URL,
+  bitrixCategoryId: BITRIX_CATEGORY_ID,
+} = config
 
 // Локальный Postgres — без TLS; управляемый (Neon/Vercel Postgres и т.п.) — с TLS.
 const isLocalDb = /@(localhost|127\.0\.0\.1)[:/]/.test(DATABASE_URL)
@@ -97,10 +82,13 @@ const pool = new pg.Pool({
   // чем зависший запрос, съедающий лимит serverless-функции.
   connectionTimeoutMillis: 8_000,
   idleTimeoutMillis: 30_000,
+  // Ни один запрос не должен держать соединение дольше 15 с (зависший запрос
+  // иначе исчерпает пул из 5 соединений и положит все эндпоинты).
+  statement_timeout: 15_000,
   // Neon и другие управляемые Postgres предъявляют публично доверенный
   // сертификат — проверяем его, иначе TLS-канал можно тихо перехватить.
   // DB_SSL_NO_VERIFY=1 — только для сервера с самоподписанной цепочкой.
-  ssl: isLocalDb ? undefined : { rejectUnauthorized: process.env.DB_SSL_NO_VERIFY !== '1' },
+  ssl: isLocalDb ? undefined : { rejectUnauthorized: config.dbSslVerify },
 })
 
 // КРИТИЧНО: без этого обработчика ошибка на простаивающем соединении
@@ -108,7 +96,7 @@ const pool = new pg.Pool({
 // событием 'error' и аварийно завершает весь процесс Node — сайт падает
 // целиком на VPS-деплое, пока кто-то вручную не перезапустит демон.
 pool.on('error', (err) => {
-  console.error('[db] idle client error (обработано, процесс жив):', err.message)
+  log.error('idle client error (обработано, процесс жив)', { area: 'db', ...errFields(err) })
 })
 
 // ---- схема --------------------------------------------------------------------
@@ -120,18 +108,6 @@ pool.on('error', (err) => {
 // Все операторы идемпотентны, выполняются один раз на инстанс (memo-промис);
 // при ошибке не роняем запрос — таблица, скорее всего, уже есть, а падение
 // INSERT-а и так будет замечено и залогировано.
-
-/** Поля атрибуции: имя колонки → максимальная длина. Единый источник для
- * схемы, приёма заявки и CSV. */
-const ATTRIBUTION_COLUMNS = {
-  utm_source: 120,
-  utm_medium: 120,
-  utm_campaign: 120,
-  utm_content: 120,
-  utm_term: 120,
-  referrer: 500,
-  landing_path: 255,
-}
 
 let schemaReady = null
 function ensureSchema() {
@@ -180,7 +156,7 @@ function ensureSchema() {
     )
     .catch((e) => {
       schemaReady = null
-      console.error('[db] ensureSchema failed (работаем с тем, что есть):', e.message)
+      log.error('ensureSchema failed (работаем с тем, что есть)', { area: 'db', ...errFields(e) })
     })
   return schemaReady
 }
@@ -230,7 +206,7 @@ async function pushToBitrix({ firstName, lastName, email, phone, track, organiza
       },
     })
   } catch (e) {
-    console.error('[bitrix] contact.add failed (сделка всё равно будет создана):', e.message)
+    log.error('contact.add failed (сделка всё равно будет создана)', { area: 'bitrix', ...errFields(e) })
   }
 
   const commentLines = [
@@ -309,7 +285,7 @@ function passwordMatches(password) {
 }
 const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }
 if (!ADMIN_PASSWORD_HASH.startsWith('scrypt:')) {
-  console.warn('[security] ADMIN_PASSWORD_HASH в старом формате SHA-256 — перейдите на scrypt: node scripts/hash-admin-password.mjs')
+  log.warn('ADMIN_PASSWORD_HASH в старом формате SHA-256 — перейдите на scrypt: node scripts/hash-admin-password.mjs', { area: 'security' })
 }
 
 const TOKEN_TTL_MS = 12 * 60 * 60 * 1000
@@ -406,7 +382,7 @@ function pruneLog(table) {
     .then(() => undefined)
     .catch((e) => {
       lastPruned.delete(table) // попробуем снова со следующим запросом
-      console.error(`[db] очистка ${table} не удалась:`, e.message)
+      log.error('очистка журнала не удалась', { area: 'db', table, ...errFields(e) })
     })
 }
 
@@ -451,47 +427,6 @@ async function noteSubmission(ipHash) {
   await pruneLog('application_submissions')
 }
 
-/**
- * Нормализует поля атрибуции из тела заявки: обрезает до лимита колонки (это
- * аналитика, а не данные участника — лишнее лучше отрезать, чем отклонить
- * заявку), убирает управляющие символы, реферер сводит к схеме+хосту+пути
- * (без query — там бывают чужие токены), путь входа принимает только с «/».
- * Не-строки (объект/массив/число в JSON) отбрасываются — иначе в БД и в
- * UTM_SOURCE сделки уезжал бы «[object Object]».
- */
-function pickAttribution(b) {
-  const clean = (v, max) =>
-    (typeof v === 'string' ? v : '')
-      // Управляющие символы вырезаются намеренно: метки уходят в CSV и в CRM.
-      // eslint-disable-next-line no-control-regex
-      .replace(/[\u0000-\u001f\u007f]/g, '')
-      .trim()
-      .slice(0, max) || null
-
-  let referrer = clean(b.referrer, 2000)
-  if (referrer) {
-    try {
-      const u = new URL(referrer)
-      referrer = /^https?:$/.test(u.protocol) ? `${u.origin}${u.pathname}`.slice(0, ATTRIBUTION_COLUMNS.referrer) : null
-    } catch {
-      referrer = null
-    }
-  }
-
-  let landing_path = clean(b.landingPath, ATTRIBUTION_COLUMNS.landing_path)
-  if (landing_path && !landing_path.startsWith('/')) landing_path = null
-
-  return {
-    utm_source: clean(b.utmSource, ATTRIBUTION_COLUMNS.utm_source),
-    utm_medium: clean(b.utmMedium, ATTRIBUTION_COLUMNS.utm_medium),
-    utm_campaign: clean(b.utmCampaign, ATTRIBUTION_COLUMNS.utm_campaign),
-    utm_content: clean(b.utmContent, ATTRIBUTION_COLUMNS.utm_content),
-    utm_term: clean(b.utmTerm, ATTRIBUTION_COLUMNS.utm_term),
-    referrer,
-    landing_path,
-  }
-}
-
 // ---- переходы к регистрации ------------------------------------------------
 //
 // Регистрация идёт во внешней Google-форме, поэтому utm-метки до нашей БД с
@@ -502,7 +437,6 @@ function pickAttribution(b) {
 
 const CLICK_MAX_PER_IP_HOUR = 30
 const clickLimiterIp = makeLimiter({ windowMs: 60 * 60 * 1000, max: CLICK_MAX_PER_IP_HOUR })
-const CLICK_LANGS = new Set(['ru', 'kk', 'en'])
 /** Колонки журнала переходов — одна точка для INSERT и CSV. */
 const CLICK_COLUMNS = ['id', 'created_at', 'lang', 'link_location', ...Object.keys(ATTRIBUTION_COLUMNS)]
 
@@ -608,30 +542,47 @@ app.use((req, res, next) => {
 // Стоит до маршрутов, чтобы сжимались и ответы API.
 if (!process.env.VERCEL) app.use(compression())
 
+// Идентификатор запроса (в ответе и в логе) и одна строка лога на запрос.
+app.use((req, res, next) => {
+  req.id = crypto.randomUUID()
+  res.setHeader('X-Request-Id', req.id)
+  if (req.path.startsWith('/api/') && req.path !== '/api/health') {
+    const started = Date.now()
+    res.on('finish', () =>
+      log.info('request', { area: 'http', id: req.id, method: req.method, path: req.path, status: res.statusCode, ms: Date.now() - started })
+    )
+  }
+  next()
+})
+
 app.use(express.json({ limit: '32kb' }))
+
+// Проверка живости для мониторинга / Docker / балансировщика. 200 — процесс
+// жив и база отвечает; 503 — база недоступна. Без данных и без авторизации.
+app.get('/api/health', async (_req, res) => {
+  try {
+    await Promise.race([
+      pool.query('SELECT 1'),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3_000).unref()),
+    ])
+    res.json({ status: 'ok' })
+  } catch (e) {
+    log.error('health check: db unavailable', { area: 'db', ...errFields(e) })
+    res.status(503).json({ status: 'degraded', error: 'db' })
+  }
+})
 
 app.post('/api/applications', async (req, res) => {
   const ip = clientIp(req)
   if (!sameOrigin(req)) return res.status(403).json({ error: 'origin' })
-  const b = req.body && typeof req.body === 'object' ? req.body : {}
+  const b = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {}
 
   // honeypot: боты заполняют всё подряд — отвечаем «успехом», ничего не сохраняя
   if (b._honey) return res.json({ ok: true })
 
-  const firstName = String(b.firstName ?? '').trim()
-  const lastName = String(b.lastName ?? '').trim()
-  const email = String(b.email ?? '').trim().toLowerCase()
-  const phone = String(b.phone ?? '').trim()
-  const track = String(b.track ?? '')
-  const organization = String(b.organization ?? '').trim()
-  const message = String(b.message ?? '').trim()
-
-  if (!firstName || !lastName || !email || !track) return res.status(400).json({ error: 'required' })
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'email' })
-  if (phone && !/^\+?[\d\s\-()]{6,20}$/.test(phone)) return res.status(400).json({ error: 'phone' })
-  if (!['ITECX college', 'ITECX academic'].includes(track)) return res.status(400).json({ error: 'track' })
-  if ([firstName, lastName, organization].some((s) => s.length > 200) || message.length > 2000)
-    return res.status(400).json({ error: 'too_long' })
+  const checked = validateApplication(b)
+  if (checked.error) return res.status(400).json({ error: checked.error })
+  const { firstName, lastName, email, phone, track, organization, message } = checked.value
   const attribution = pickAttribution(b)
 
   if (!submitLimiterIp(ip) || !submitLimiterEmail(email)) {
@@ -644,7 +595,7 @@ app.post('/api/applications', async (req, res) => {
   try {
     if (await submitBlockedInDb(ipHash, email)) return res.status(429).json({ error: 'rate_limit' })
   } catch (e) {
-    console.error('rate check failed (заявка пропущена дальше):', e.message)
+    log.error('rate check failed (заявка пропущена дальше)', { area: 'db', ...errFields(e) })
   }
 
   let insertedId
@@ -666,13 +617,13 @@ app.post('/api/applications', async (req, res) => {
     )
     insertedId = rows[0].id
   } catch (e) {
-    console.error('insert failed:', e.message)
+    log.error('insert application failed', { area: 'db', ...errFields(e) })
     return res.status(500).json({ error: 'db' })
   }
   // Не ждём запись в журнал IP-лимита перед ответом, но на Vercel она должна
   // доехать — иначе функция замёрзнет после ответа, строка не запишется, и
   // почасовой лимит по IP не сработает (см. waitUntil ниже).
-  const submissionTask = noteSubmission(ipHash).catch((e) => console.error('submission log failed:', e.message))
+  const submissionTask = noteSubmission(ipHash).catch((e) => log.error('submission log failed', { area: 'db', ...errFields(e) }))
 
   // Заявка уже в БД — отвечаем пользователю СРАЗУ, не дожидаясь Bitrix.
   // Иначе медленный CRM (2 HTTP-вызова × до 6с) держит форму «на отправке»
@@ -686,7 +637,7 @@ app.post('/api/applications', async (req, res) => {
         ? pool.query('UPDATE applications SET bitrix_deal_id = $1 WHERE id = $2', [String(dealId), insertedId])
         : null
     )
-    .catch((e) => console.error('[bitrix] push failed (заявка сохранена в БД, в CRM не попала):', e.message))
+    .catch((e) => log.error('push failed (заявка сохранена в БД, в CRM не попала)', { area: 'bitrix', ...errFields(e) }))
 
   // Vercel: не дать платформе заморозить функцию до завершения фоновых задач
   // (обе уже с .catch, поэтому Promise.all не отклонится).
@@ -701,7 +652,7 @@ app.post('/api/admin/login', async (req, res) => {
       return res.status(429).json({ error: 'locked', retryAfter: LOGIN_WINDOW_MIN * 60 })
     }
   } catch (e) {
-    console.error('login throttle check failed:', e.message)
+    log.error('login throttle check failed', { area: 'db', ...errFields(e) })
     return res.status(503).json({ error: 'unavailable' })
   }
 
@@ -709,8 +660,8 @@ app.post('/api/admin/login', async (req, res) => {
   if (password && passwordMatches(password)) {
     return res.json({ token: issueToken() })
   }
-  await noteLoginFailure(ipHash).catch((e) => console.error('login failure log failed:', e.message))
-  console.warn(`[security] неудачный вход в админку (ip ${ipHash.slice(0, 8)})`)
+  await noteLoginFailure(ipHash).catch((e) => log.error('login failure log failed', { area: 'db', ...errFields(e) }))
+  log.warn('неудачный вход в админку', { area: 'security', ip: ipHash.slice(0, 8) })
   res.status(401).json({ error: 'invalid', retryAfter: 0 })
 })
 
@@ -747,7 +698,7 @@ app.get('/api/applications', async (req, res) => {
     )
     res.json({ rows })
   } catch (e) {
-    console.error('select failed:', e.message)
+    log.error('select applications failed', { area: 'db', ...errFields(e) })
     res.status(500).json({ error: 'db' })
   }
 })
@@ -774,7 +725,7 @@ app.get('/api/applications.csv', async (req, res) => {
     )
     sendCsv(res, APPLICATION_COLUMNS, rows, 'itecx-applications')
   } catch (e) {
-    console.error('csv export failed:', e.message)
+    log.error('applications csv failed', { area: 'db', ...errFields(e) })
     res.status(500).json({ error: 'db' })
   }
 })
@@ -786,9 +737,8 @@ app.post('/api/registration-click', async (req, res) => {
   if (!sameOrigin(req)) return res.status(403).json({ error: 'origin' })
   const ip = clientIp(req)
   if (!clickLimiterIp(ip)) return res.status(429).json({ error: 'rate_limit' })
-  const b = req.body && typeof req.body === 'object' ? req.body : {}
-  const lang = CLICK_LANGS.has(b.lang) ? b.lang : null
-  const linkLocation = typeof b.linkLocation === 'string' && /^[a-z0-9-]{1,40}$/.test(b.linkLocation) ? b.linkLocation : null
+  const b = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {}
+  const { lang, linkLocation } = pickClick(b)
   const attribution = pickAttribution(b)
   const ipHash = hashIp(ip)
   await ensureSchema()
@@ -808,7 +758,7 @@ app.post('/api/registration-click', async (req, res) => {
     // Чистка журнала — в фоне (на Vercel waitUntil не даёт её заморозить).
     vercelWaitUntil?.(pruneLog('registration_click_hits'))
   } catch (e) {
-    console.error('registration click failed:', e.message)
+    log.error('registration click failed', { area: 'db', ...errFields(e) })
     return res.status(503).json({ error: 'db' })
   }
   res.status(204).end()
@@ -818,7 +768,7 @@ app.post('/api/registration-click', async (req, res) => {
 // Источник — utm_source, иначе хост реферера, иначе «прямой».
 app.get('/api/registration-clicks/summary', async (req, res) => {
   if (!bearerOk(req)) return res.status(401).json({ error: 'unauthorized' })
-  const days = Math.min(Math.max(Number.parseInt(String(req.query.days ?? '30'), 10) || 30, 1), 365)
+  const days = parseDays(req.query.days)
   await ensureSchema()
   try {
     const { rows } = await pool.query(
@@ -835,7 +785,7 @@ app.get('/api/registration-clicks/summary', async (req, res) => {
     )
     res.json({ days, total: totalRows[0].total, sources: rows })
   } catch (e) {
-    console.error('click summary failed:', e.message)
+    log.error('click summary failed', { area: 'db', ...errFields(e) })
     res.status(500).json({ error: 'db' })
   }
 })
@@ -850,7 +800,7 @@ app.get('/api/registration-clicks.csv', async (req, res) => {
     )
     sendCsv(res, CLICK_COLUMNS, rows, 'itecx-registration-clicks')
   } catch (e) {
-    console.error('click csv export failed:', e.message)
+    log.error('clicks csv failed', { area: 'db', ...errFields(e) })
     res.status(500).json({ error: 'db' })
   }
 })
@@ -858,13 +808,18 @@ app.get('/api/registration-clicks.csv', async (req, res) => {
 // Неизвестный маршрут внутри /api/* — явный 404, а не откат к SPA-разметке.
 app.use('/api', (_req, res) => res.status(404).json({ error: 'not_found' }))
 
-// Единая точка отказа: сюда попадают, например, ошибки парсинга битого JSON
-// из express.json(). Ответ всегда общий JSON без стека — детали только в логах.
+// Единая точка отказа (формат ошибок везде один: { error: <код> }).
+// Ошибки клиента (битый JSON, слишком большое тело) отдают 4xx, всё остальное —
+// 500: раньше любая внутренняя ошибка ошибочно выглядела как 400. Стек и
+// тексты исключений клиенту не уходят — только в лог.
 // eslint-disable-next-line no-unused-vars
-app.use((err, _req, res, _next) => {
-  console.error('[express] unhandled error:', err?.message ?? err)
+app.use((err, req, res, _next) => {
+  const status = Number(err?.status ?? err?.statusCode)
+  const clientError = status >= 400 && status < 500
+  log[clientError ? 'warn' : 'error']('unhandled error', { area: 'http', id: req.id, path: req.path, ...errFields(err) })
   if (res.headersSent) return
-  res.status(err?.status && err.status < 500 ? err.status : 400).json({ error: 'bad_request' })
+  if (clientError) return res.status(status).json({ error: status === 413 ? 'too_large' : 'bad_request' })
+  res.status(500).json({ error: 'internal' })
 })
 
 export default app

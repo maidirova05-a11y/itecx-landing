@@ -10,7 +10,8 @@
     "start": "npm run build && node server/index.mjs",
     "lint": "oxlint",
     "check:seo": "node scripts/check-seo.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
     "@vercel/functions": "^3.7.5",
