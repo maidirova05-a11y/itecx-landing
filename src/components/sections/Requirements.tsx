@@ -9,7 +9,6 @@ export function Requirements() {
 
   return (
     <section id="requirements" className="relative overflow-hidden py-24 md:py-32">
-      <div aria-hidden="true" className="aura aura-blue -right-40 top-20 h-[420px] w-[520px]" />
 
       <Container className="relative">
         <SectionHeader kicker={requirements.kicker} title={requirements.title} />

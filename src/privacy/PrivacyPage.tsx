@@ -44,7 +44,7 @@ export function PrivacyPage() {
               </h1>
 
               <p
-                className="mt-5 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-text-muted"
+                className="mt-5 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 font-mono text-[12px] text-text-muted"
                 style={{ borderColor: 'var(--color-hairline-strong)' }}
               >
                 {privacy.updatedLabel}
@@ -60,7 +60,7 @@ export function PrivacyPage() {
             {/* Оглавление: документ длинный, без него читателю пришлось бы скроллить вслепую. */}
             <Reveal delayMs={140} className="mt-10">
               <GlassCard className="p-6 sm:p-7">
-                <h2 className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-text-faint">
+                <h2 className="font-mono text-[12px] font-medium text-text-faint">
                   {privacy.tocTitle}
                 </h2>
                 <ol className="mt-4 grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
@@ -84,7 +84,7 @@ export function PrivacyPage() {
                     className="border-t pt-7"
                     style={{ borderColor: 'var(--color-hairline)', scrollMarginTop: '96px' }}
                   >
-                    <p className="font-mono text-[11px] tracking-[0.16em]" style={{ color: 'var(--color-accent)' }}>
+                    <p className="font-mono text-[12px]" style={{ color: 'var(--color-accent)' }}>
                       {num(i)}
                     </p>
 
@@ -115,7 +115,7 @@ export function PrivacyPage() {
               <Reveal>
                 <section id="contacts" style={{ scrollMarginTop: '96px' }}>
                   <GlassCard className="p-7 sm:p-9">
-                    <p className="font-mono text-[11px] tracking-[0.16em]" style={{ color: 'var(--color-accent)' }}>
+                    <p className="font-mono text-[12px]" style={{ color: 'var(--color-accent)' }}>
                       {num(sections.length)}
                     </p>
 
@@ -126,7 +126,7 @@ export function PrivacyPage() {
 
                     <dl className="mt-6 grid gap-5 sm:grid-cols-2">
                       <div>
-                        <dt className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-faint">
+                        <dt className="font-mono text-[12px] text-text-faint">
                           {contacts.emailLabel}
                         </dt>
                         <dd className="mt-1.5">
@@ -139,7 +139,7 @@ export function PrivacyPage() {
                         </dd>
                       </div>
                       <div>
-                        <dt className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-faint">
+                        <dt className="font-mono text-[12px] text-text-faint">
                           {contacts.siteLabel}
                         </dt>
                         <dd className="mt-1.5">

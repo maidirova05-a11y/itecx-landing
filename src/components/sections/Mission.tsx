@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import { Container } from '../layout/Container'
 import { Reveal } from '../common/Reveal'
 import { SectionHeader } from '../common/SectionHeader'
@@ -7,19 +7,22 @@ import { useContent } from '../../i18n'
 
 const ICONS: ReactNode[] = [
   // Atom — research skills
-  <>
+  <Fragment key="atom">
     <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
     <ellipse cx="12" cy="12" rx="9" ry="3.6" />
     <ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(60 12 12)" />
     <ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(-60 12 12)" />
-  </>,
+  </Fragment>,
   // Globe — international exchange
-  <>
+  <Fragment key="globe">
     <circle cx="12" cy="12" r="9" />
     <path d="M3 12h18M12 3c2.6 2.8 3.9 5.8 3.9 9s-1.3 6.2-3.9 9c-2.6-2.8-3.9-5.8-3.9-9S9.4 5.8 12 3Z" />
-  </>,
-  // Spark — innovation
-  <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18" />,
+  </Fragment>,
+  // Lightbulb — innovation
+  <Fragment key="bulb">
+    <path d="M9 18h6M10 21h4" />
+    <path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16.5h5.2v-.7c0-.8.4-1.5 1-2A6 6 0 0 0 12 3Z" />
+  </Fragment>,
 ]
 
 export function Mission() {

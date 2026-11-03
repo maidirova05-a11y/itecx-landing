@@ -5,7 +5,7 @@ import { PhotoCard } from '../common/PhotoCard'
 import { useContent } from '../../i18n'
 
 /**
- * Three stages on one glowing track: blue at the school end, red at the final —
+ * Three stages on one hairline track; only the final is marked in red —
  * the same blue→red journey as the hero. Desktop runs it horizontally, mobile
  * drops it into a vertical rail on the left.
  */
@@ -15,7 +15,6 @@ export function Stages() {
 
   return (
     <section id="stages" className="relative overflow-hidden py-24 md:py-32" style={{ background: 'var(--color-surface)' }}>
-      <div aria-hidden="true" className="aura aura-blue left-1/2 top-0 h-[360px] w-[720px] -translate-x-1/2" />
 
       <Container className="relative">
         <SectionHeader kicker={stages.kicker} title={stages.title} />
@@ -25,12 +24,12 @@ export function Stages() {
           <span
             aria-hidden="true"
             className="absolute bottom-2 left-[13px] top-2 w-px md:hidden"
-            style={{ background: 'linear-gradient(180deg, rgb(92 162 255 / 0.7), rgb(227 31 45 / 0.8))' }}
+            style={{ background: 'var(--color-hairline-strong)' }}
           />
           <span
             aria-hidden="true"
             className="absolute inset-x-0 top-[13px] hidden h-px md:block"
-            style={{ background: 'linear-gradient(90deg, rgb(92 162 255 / 0.7), rgb(227 31 45 / 0.8))' }}
+            style={{ background: 'var(--color-hairline-strong)' }}
           />
           <ol className="grid gap-10 md:grid-cols-3 md:gap-8">
           {stages.items.map((item, i) => {
@@ -42,14 +41,13 @@ export function Stages() {
                     aria-hidden="true"
                     className="absolute -left-10 top-0 flex h-[27px] w-[27px] items-center justify-center rounded-full border md:static"
                     style={{
-                      borderColor: final ? 'rgb(227 31 45 / 0.8)' : 'rgb(92 162 255 / 0.6)',
+                      borderColor: final ? 'var(--color-accent)' : 'var(--color-hairline-strong)',
                       background: 'var(--color-surface)',
-                      boxShadow: final ? '0 0 22px rgb(227 31 45 / 0.6)' : '0 0 18px rgb(92 162 255 / 0.45)',
                     }}
                   >
                     <span
                       className="h-2 w-2 rounded-full"
-                      style={{ background: final ? 'var(--color-accent)' : 'var(--color-glow)' }}
+                      style={{ background: final ? 'var(--color-accent)' : 'var(--color-navy-soft)' }}
                     />
                   </span>
                   <p className="font-mono text-[12px] text-text-faint md:mt-7">{item.step}</p>

@@ -110,9 +110,6 @@ button:focus-visible,
 .press {
   transition: transform 180ms var(--ease-micro), opacity 180ms var(--ease-micro), border-color 200ms var(--ease-micro), background-color 200ms var(--ease-micro);
 }
-.press:hover {
-  transform: scale(1.02);
-}
 .press:active {
   transform: scale(0.98);
 }
@@ -135,25 +132,14 @@ button:focus-visible,
 
 /* ---------- Shared section language (planet + X, see hero) ---------- */
 
-/* Small mono label above a section title, with a glowing red point */
+/* Small mono label above a section title: sentence case, quiet */
 .kicker {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
   color: var(--color-accent-soft);
-}
-.kicker::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-accent);
-  box-shadow: 0 0 10px 2px rgb(227 31 45 / 0.6);
 }
 
 .section-title {
@@ -163,49 +149,20 @@ button:focus-visible,
   line-height: 1.1;
   letter-spacing: -0.02em;
   text-wrap: balance;
-  background: linear-gradient(180deg, #fff 30%, #c4d3f0);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: #fff;
 }
 
-/* Card: faint top light, blue rim on hover */
+/* Card: flat surface step with a hairline; hover only brightens the border */
 .card {
   position: relative;
   border: 1px solid var(--color-hairline);
-  border-radius: 20px;
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.045), rgb(255 255 255 / 0.01) 40%),
-    color-mix(in srgb, var(--color-surface-1) 82%, transparent);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  transition:
-    border-color 300ms var(--ease-micro),
-    box-shadow 400ms var(--ease-out-soft),
-    transform 400ms var(--ease-out-soft);
+  border-radius: 16px;
+  background: var(--color-surface-1);
+  transition: border-color 200ms var(--ease-micro), background-color 200ms var(--ease-micro);
 }
 .card-hover:hover {
-  border-color: rgb(92 162 255 / 0.32);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.08),
-    0 24px 60px -32px rgb(92 162 255 / 0.55);
-  transform: translateY(-3px);
-}
-
-/* Soft coloured light behind a section — decorative, never over text */
-.aura {
-  position: absolute;
-  pointer-events: none;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.5;
-}
-.aura-blue {
-  background: radial-gradient(closest-side, rgb(92 162 255 / 0.4), transparent);
-}
-.aura-red {
-  background: radial-gradient(closest-side, rgb(227 31 45 / 0.32), transparent);
+  border-color: var(--color-hairline-strong);
+  background: var(--color-surface-2);
 }
 
 /* Framed photo with a slow zoom on hover */
@@ -230,7 +187,7 @@ button:focus-visible,
   background: linear-gradient(to top, rgb(6 8 13 / 0.55), transparent 45%);
 }
 
-/* Planet limb: a wide glowing arc, the hero's horizon reused as a divider */
+/* Planet limb: a wide arc, the hero's horizon reused as a divider (hairline rim, no glow) */
 .horizon {
   position: absolute;
   left: 50%;
@@ -239,11 +196,7 @@ button:focus-visible,
   translate: -50% 0;
   border-radius: 50%;
   background: var(--color-ink);
-  box-shadow:
-    0 0 0 1px rgb(190 220 255 / 0.5),
-    0 -4px 20px rgb(92 162 255 / 0.55),
-    0 -30px 110px rgb(92 162 255 / 0.32),
-    inset 0 14px 30px -10px rgb(92 162 255 / 0.55);
+  box-shadow: 0 0 0 1px rgb(190 220 255 / 0.28);
   pointer-events: none;
 }
 

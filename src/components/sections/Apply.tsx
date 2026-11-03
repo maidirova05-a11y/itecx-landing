@@ -33,7 +33,7 @@ export function Apply() {
               target="_blank"
               rel="noopener noreferrer"
               className="press w-full rounded-full px-9 py-4 text-[15px] font-medium text-white sm:w-auto"
-              style={{ background: 'var(--color-accent)', boxShadow: '0 0 44px rgb(227 31 45 / 0.45)' }}
+              style={{ background: 'var(--color-accent)' }}
             >
               {apply.cta}
             </a>

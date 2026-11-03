@@ -18,11 +18,11 @@ import { REGISTRATION_URL } from '../lib/registration'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
-/** Цвет этапа: первые два — синее свечение, последний (защита) — красный. */
+/** Цвет этапа: первые два — синий, последний (защита) — красный. */
 const phaseTone = (i: number, total: number) =>
   i === total - 1
     ? { rgb: '227 31 45', solid: 'var(--color-accent)' }
-    : { rgb: '92 162 255', solid: 'var(--color-glow)' }
+    : { rgb: '92 162 255', solid: 'var(--color-navy-soft)' }
 
 const PHASE_PHOTOS = ['/images/mission.jpg', '/images/prepare.jpg', '/images/stages.jpg']
 
@@ -34,7 +34,7 @@ function RegisterButton({ label, className = '' }: { label: string; className?: 
       target="_blank"
       rel="noopener noreferrer"
       className={`press rounded-full px-7 py-3.5 text-[14px] font-medium text-white ${className}`}
-      style={{ background: 'var(--color-accent)', boxShadow: '0 0 32px rgb(227 31 45 / 0.35)' }}
+      style={{ background: 'var(--color-accent)' }}
     >
       {label}
     </a>
@@ -72,7 +72,6 @@ export function GuidePage() {
       <main id="main-content">
         {/* ---------- Hero ---------- */}
         <section className="relative overflow-hidden pb-36 pt-20 md:pb-48 md:pt-28">
-          <div aria-hidden="true" className="aura aura-blue left-1/2 top-0 h-[420px] w-[820px] -translate-x-1/2" />
           <svg
             aria-hidden="true"
             viewBox="0 0 420 520"
@@ -109,7 +108,7 @@ export function GuidePage() {
                     <span
                       aria-hidden="true"
                       className="flex h-8 w-8 items-center justify-center rounded-full font-mono text-[12px]"
-                      style={{ background: 'rgb(92 162 255 / 0.12)', color: 'var(--color-glow)' }}
+                      style={{ background: 'var(--color-surface-3)', color: 'var(--color-navy-soft)' }}
                     >
                       {link.n}
                     </span>
@@ -137,7 +136,7 @@ export function GuidePage() {
                     <div className="md:col-span-4">
                       <div className="md:sticky md:top-28">
                         <Reveal>
-                          <p className="font-mono text-[12px] uppercase tracking-[0.16em]" style={{ color: tone.solid }}>
+                          <p className="font-mono text-[13px]" style={{ color: tone.solid }}>
                             {guide.phaseLabel} {pad(pi + 1)}
                           </p>
                           <h3 className="mt-3 text-[26px] font-semibold leading-tight tracking-tight text-text sm:text-[30px]">
@@ -155,7 +154,7 @@ export function GuidePage() {
                       <span
                         aria-hidden="true"
                         className="absolute bottom-6 left-[19px] top-6 w-px"
-                        style={{ background: `linear-gradient(180deg, rgb(${tone.rgb} / 0.7), rgb(${tone.rgb} / 0.15))` }}
+                        style={{ background: 'var(--color-hairline-strong)' }}
                       />
                       {phase.steps.map((step, si) => {
                         const n = phaseStart[pi] + si + 1
@@ -168,10 +167,9 @@ export function GuidePage() {
                                 aria-hidden="true"
                                 className="absolute -left-14 top-5 flex h-10 w-10 items-center justify-center rounded-full border font-mono text-[12px]"
                                 style={{
-                                  borderColor: `rgb(${tone.rgb} / 0.55)`,
+                                  borderColor: tone.solid,
                                   background: 'var(--color-ink)',
                                   color: tone.solid,
-                                  boxShadow: `0 0 18px rgb(${tone.rgb} / 0.35)`,
                                 }}
                               >
                                 {pad(n)}
@@ -197,7 +195,6 @@ export function GuidePage() {
 
         {/* ---------- Criteria ---------- */}
         <section id="criteria" className="relative scroll-mt-20 overflow-hidden py-20 md:py-28" style={{ background: 'var(--color-surface)' }}>
-          <div aria-hidden="true" className="aura aura-red -right-40 top-10 h-[420px] w-[520px]" />
           <Container className="relative">
             <div className="grid gap-10 md:grid-cols-12 md:items-end">
               <div className="md:col-span-7">

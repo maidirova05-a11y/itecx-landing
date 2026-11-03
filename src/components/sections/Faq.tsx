@@ -25,7 +25,7 @@ export function Faq() {
           <div className="space-y-3 md:col-span-8">
             {faq.items.map((item, i) => (
               <Reveal key={item.q} delayMs={i * 50}>
-                <details className="card group open:border-[rgb(92_162_255_/_0.3)]" open={i === 0}>
+                <details className="card group open:border-[var(--color-hairline-strong)]" open={i === 0}>
                   <summary className="flex cursor-pointer list-none items-start justify-between gap-6 p-6 marker:content-[''] [&::-webkit-details-marker]:hidden">
                     <h3 className="text-[16.5px] font-medium leading-snug text-text sm:text-[17.5px]">{item.q}</h3>
                     <span

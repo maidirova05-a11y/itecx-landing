@@ -25,7 +25,7 @@ export function LangSwitcher({ ariaLabel }: { ariaLabel: string }) {
           onFocus={() => preloadDictionary(item.code)}
           onTouchStart={() => preloadDictionary(item.code)}
           aria-pressed={lang === item.code}
-          className="press rounded-full px-2.5 py-1 font-mono text-[11px] tracking-[0.08em]"
+          className="press rounded-full px-2.5 py-1 font-mono text-[11px]"
           style={{
             background: lang === item.code ? 'var(--color-text)' : 'transparent',
             color: lang === item.code ? 'var(--color-ink)' : 'var(--color-text-muted)',

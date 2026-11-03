@@ -9,6 +9,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import express from 'express'
 import app from './app.mjs'
+import { log, errFields } from './lib/logger.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -16,10 +17,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // необработанная ошибка способна убить Node и положить сайт для всех до
 // ручного перезапуска. Логируем и продолжаем работу вместо падения.
 process.on('unhandledRejection', (err) => {
-  console.error('[process] unhandled rejection:', err)
+  log.error('unhandled rejection', { area: 'process', ...errFields(err) })
 })
 process.on('uncaughtException', (err) => {
-  console.error('[process] uncaught exception:', err)
+  log.error('uncaught exception', { area: 'process', ...errFields(err) })
 })
 
 // Продакшен: раздаём собранный сайт из ../dist (в dev это делает Vite)
@@ -119,8 +120,21 @@ app.use(
 )
 app.get('/admin', (req, res) => sendDist(req, res, 'admin.html', 'no-store'))
 
+// Всё остальное — короткий 404 без отпечатка Express.
+app.use((_req, res) => res.status(404).type('text/plain').send('Not found'))
+
 // На VPS слушаем только 127.0.0.1 — наружу порт не торчит,
 // внешний трафик заходит исключительно через nginx-прокси.
 const PORT = process.env.PORT ?? '3001'
 const HOST = process.env.HOST ?? '127.0.0.1'
-app.listen(Number(PORT), HOST, () => console.log(`ITECX API on http://${HOST}:${PORT}`))
+const server = app.listen(Number(PORT), HOST, () => log.info('listening', { host: HOST, port: Number(PORT) }))
+
+// Остановка по SIGTERM (docker stop, systemd): дообслуживаем текущие запросы,
+// новых не принимаем; через 10 с выходим принудительно.
+for (const sig of ['SIGTERM', 'SIGINT']) {
+  process.once(sig, () => {
+    log.info('shutting down', { signal: sig })
+    server.close(() => process.exit(0))
+    setTimeout(() => process.exit(0), 10_000).unref()
+  })
+}

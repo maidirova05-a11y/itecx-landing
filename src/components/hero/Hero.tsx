@@ -79,7 +79,7 @@ export function Hero() {
 
         <Container className="relative flex flex-col items-center pb-20 pt-14 text-center md:pb-24 md:pt-20">
           <span
-            className="hero-copy inline-flex items-center rounded-full border px-4 py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-text-muted"
+            className="hero-copy inline-flex items-center rounded-full border px-4 py-1.5 font-mono text-[13px] text-text-muted"
             style={{ borderColor: 'var(--color-hairline-strong)', animationDelay: 'var(--t-copy)' }}
           >
             {hero.eyebrow}
@@ -106,7 +106,7 @@ export function Hero() {
             <a
               href="#about"
               className="press rounded-full px-7 py-3.5 text-[14px] font-medium text-white"
-              style={{ background: 'var(--color-accent)', boxShadow: '0 0 32px rgb(227 31 45 / 0.35)' }}
+              style={{ background: 'var(--color-accent)' }}
             >
               {hero.ctaPrimary}
             </a>
