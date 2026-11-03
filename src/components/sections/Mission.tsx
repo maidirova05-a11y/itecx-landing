@@ -18,8 +18,11 @@ const ICONS: ReactNode[] = [
     <circle cx="12" cy="12" r="9" />
     <path d="M3 12h18M12 3c2.6 2.8 3.9 5.8 3.9 9s-1.3 6.2-3.9 9c-2.6-2.8-3.9-5.8-3.9-9S9.4 5.8 12 3Z" />
   </Fragment>,
-  // Spark — innovation
-  <path key="spark" d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18" />,
+  // Lightbulb — innovation
+  <Fragment key="bulb">
+    <path d="M9 18h6M10 21h4" />
+    <path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16.5h5.2v-.7c0-.8.4-1.5 1-2A6 6 0 0 0 12 3Z" />
+  </Fragment>,
 ]
 
 export function Mission() {
